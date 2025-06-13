@@ -5,10 +5,10 @@ exports.getUsers = async () => {
   return result.rows;
 };
 
-exports.createUser = async ({ name, email, password_hash, is_active, is_blocked, avatar_url }) => {
+exports.createUser = async ({ name, email, password_hash }) => {
   const result = await pool.query(
-    'SELECT * FROM sp_create_user($1, $2, $3, $4, $5, $6)',
-    [name, email, password_hash, is_active, is_blocked, avatar_url]
+    'SELECT sp_registrar_usuario($1, $2, $3) AS message',
+    [name, email, password_hash]
   );
   return result.rows[0];
 };

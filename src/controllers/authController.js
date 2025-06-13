@@ -19,7 +19,58 @@ exports.login = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: '8h' }
     );
-    res.json({ token, user: { id: user.id, name: user.name, email: user.email } });
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 8 * 60 * 60 * 1000 // 8 horas
+    });
+    res.json({ user: { id: user.id, name: user.name, email: user.email } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.me = async (req, res) => {
+  const token = req.cookies.token;
+  if (!token) {
+    return res.status(401).json({ error: 'No autenticado' });
+  }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    res.json({ id: decoded.id, name: decoded.name, email: decoded.email, roles: decoded.roles });
+  } catch (err) {
+    return res.status(401).json({ error: 'Token inválido o expirado' });
+  }
+};
+
+exports.logout = (req, res) => {
+  res.cookie('token', '', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/',
+    expires: new Date(0)
+  });
+  res.json({ message: 'Sesión cerrada' });
+};
+
+exports.register = async (req, res) => {
+  const { name, email, password, roles } = req.body;
+  try {
+    const existing = await usersService.getUserByEmail(email);
+    if (existing) {
+      return res.status(400).json({ error: 'El email ya está registrado' });
+    }
+    const password_hash = await bcrypt.hash(password, 10);
+    const user = await usersService.createUser({
+      name,
+      email,
+      password_hash,
+      roles: roles || ['user']
+    });
+    res.status(201).json({ user: { id: user.id, name: user.name, email: user.email, roles: user.roles } });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

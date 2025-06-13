@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const modulesRoutes = require('./routes/modules');
 const tablesRoutes = require('./routes/tables');
 const columnsRoutes = require('./routes/columns');
@@ -12,8 +13,15 @@ const authRoutes = require('./routes/auth');
 const authMiddleware = require('./middleware/authMiddleware');
 
 const app = express();
-app.use(cors());
+
+// Configuración de CORS segura para credenciales
+app.use(cors({
+  origin: 'http://localhost:3000', // Cambia esto a tu frontend en producción
+  credentials: true
+}));
+
 app.use(express.json());
+app.use(cookieParser());
 
 app.use('/api/auth', authRoutes); 
 
