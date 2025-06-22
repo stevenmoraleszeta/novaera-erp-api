@@ -10,5 +10,6 @@ router.put('/:column_id', columnsController.updateColumn);
 router.delete('/:column_id', columnsController.deleteColumn);
 router.get('/table/:table_id/exists-name', columnsController.existsColumnNameInTable);
 router.get('/:column_id/has-records', columnsController.columnHasRecords);
+router.patch('/:column_id/update_cols', columnsController.updateColumnPosition);
 
 module.exports = router;

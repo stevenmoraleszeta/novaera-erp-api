@@ -5,13 +5,14 @@ exports.getColumns = async () => {
   return result.rows;
 };
 
-exports.createColumn = async ({ table_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name }) => {
+exports.createColumn = async ({ table_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name, column_position }) => {
   const result = await pool.query(
-    'SELECT sp_crear_columna($1, $2, $3, $4, $5, $6, $7) AS message',
-    [table_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name]
+    'SELECT sp_crear_columna($1, $2, $3, $4, $5, $6, $7, $8) AS message',
+    [table_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name, column_position]
   );
   return result.rows[0];
 };
+
 
 exports.getColumnsByTable = async (table_id) => {
   const result = await pool.query(
@@ -29,10 +30,10 @@ exports.getColumnById = async (column_id) => {
   return result.rows[0];
 };
 
-exports.updateColumn = async ({ column_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name }) => {
+exports.updateColumn = async ({ column_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name, column_position }) => {
   const result = await pool.query(
-    'SELECT sp_actualizar_columna($1, $2, $3, $4, $5, $6, $7) AS message',
-    [column_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name]
+    'SELECT sp_actualizar_columna($1, $2, $3, $4, $5, $6, $7, $8) AS message',
+    [column_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name, column_position]
   );
   return result.rows[0];
 };
@@ -59,4 +60,14 @@ exports.columnHasRecords = async (column_id) => {
     [column_id]
   );
   return result.rows[0].hasrecords;
+};
+
+
+exports.updateColumnPosition = async (column_id, newPosition) => {
+  console.log("sadasdasdsdasd")
+  const result = await pool.query(
+    'SELECT sp_actualizar_posicion_columna($1, $2)',
+    [column_id, newPosition]
+  );
+  return result;
 };

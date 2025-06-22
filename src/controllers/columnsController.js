@@ -42,8 +42,8 @@ exports.getColumnById = async (req, res) => {
 exports.updateColumn = async (req, res) => {
   try {
     const { column_id } = req.params;
-    const { name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name } = req.body;
-    const result = await columnsService.updateColumn({ column_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name });
+    const { name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name, column_position } = req.body;
+    const result = await columnsService.updateColumn({ column_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name, column_position });
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -78,5 +78,23 @@ exports.columnHasRecords = async (req, res) => {
     res.json({ hasRecords });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+};
+
+exports.updateColumnPosition = async (req, res) => {
+  try {
+    const { column_id } = req.params;
+    const { position } = req.body;
+
+    if (position === undefined || isNaN(position)) {
+      return res.status(400).json({ error: 'La nueva posición es requerida y debe ser un número.' });
+    }
+
+    await columnsService.updateColumnPosition(column_id, Number(position));
+
+    res.json({ message: 'Posición actualizada correctamente.' });
+  } catch (err) {
+    console.error('Error actualizando posición de columna:', err);
+    res.status(500).json({ error: 'Error actualizando la posición de la columna.' });
   }
 };
