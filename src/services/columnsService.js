@@ -33,7 +33,7 @@ exports.getColumnById = async (column_id) => {
 
 exports.updateColumn = async ({ column_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name, column_position, relation_type, validations }) => {
   const result = await pool.query(
-    'SELECT sp_actualizar_columna($1, $2, $3, $4, $5, $6, $7, $8) AS message',
+    'SELECT sp_actualizar_columna($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) AS message',
     [column_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name, column_position, relation_type, validations ]
   );
   return result.rows[0];
