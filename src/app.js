@@ -14,6 +14,8 @@ const authMiddleware = require('./middleware/authMiddleware');
 
 const app = express();
 
+app.set('trust proxy', 1);
+
 const allowedOrigins = ['http://localhost:3000', 'https://erp-system-17kb.vercel.app'];
 app.use(cors({
   origin: function(origin, callback) {
