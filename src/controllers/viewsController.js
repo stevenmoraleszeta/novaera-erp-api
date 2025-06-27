@@ -1,0 +1,97 @@
+const viewService = require('../services/viewsService');
+
+exports.getViewsByTable = async (req, res) => {
+  try {
+    const { table_id } = req.query;
+    if (!table_id) {
+      return res.status(400).json({ error: 'Falta el parámetro table_id.' });
+    }
+
+    const views = await viewService.getViewsByTable(table_id);
+    res.json(views);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.createView = async (req, res) => {
+  try {
+    const { table_id, name, sort_by, sort_direction } = req.body;
+
+    const result = await viewService.createView({
+      table_id,
+      name,
+      sort_by,
+      sort_direction,
+    });
+
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.addColumnToView = async (req, res) => {
+  try {
+    const { view_id, column_id, visible, filter_condition, filter_value } = req.body;
+
+    const result = await viewService.addColumnToView({
+      view_id,
+      column_id,
+      visible,
+      filter_condition,
+      filter_value,
+    });
+
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getColumnsByView = async (req, res) => {
+  try {
+    const { view_id } = req.query;
+    if (!view_id) {
+      return res.status(400).json({ error: 'Falta el parámetro view_id.' });
+    }
+
+    const columns = await viewService.getColumnsByView(view_id);
+    res.json(columns);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.deleteView = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await viewService.deleteView(id);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+
+exports.updateView = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updatedData = req.body;
+    const result = await viewService.updateView({ id, ...updatedData });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.updateViewColumn = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updatedData = req.body;
+    const result = await viewService.updateViewColumn({ id, ...updatedData });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

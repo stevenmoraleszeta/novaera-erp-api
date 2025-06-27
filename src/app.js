@@ -11,6 +11,7 @@ const permissionsRoutes = require('./routes/permissions');
 const notificationsRoutes = require('./routes/notifications');
 const authRoutes = require('./routes/auth');
 const authMiddleware = require('./middleware/authMiddleware');
+const viewsRoutes = require('./routes/views');
 
 const app = express();
 
@@ -44,5 +45,6 @@ app.use('/api/users', usersRoutes);
 app.use('/api/roles', rolesRoutes);
 app.use('/api/permissions', permissionsRoutes);
 app.use('/api/notifications', notificationsRoutes);
+app.use('/api/views', viewsRoutes);
 
 module.exports = app;
