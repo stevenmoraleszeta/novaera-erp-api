@@ -72,3 +72,26 @@ exports.deleteView = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+
+exports.updateView = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updatedData = req.body;
+    const result = await viewService.updateView({ id, ...updatedData });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.updateViewColumn = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updatedData = req.body;
+    const result = await viewService.updateViewColumn({ id, ...updatedData });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

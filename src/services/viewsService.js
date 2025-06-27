@@ -39,3 +39,19 @@ exports.deleteView = async (view_id) => {
   );
   return result.rows[0];
 };
+
+exports.updateView = async ({ id, name, sort_by, sort_direction }) => {
+  const result = await pool.query(
+    'SELECT sp_actualizar_vista($1, $2, $3, $4) AS message',
+    [id, name, sort_by, sort_direction]
+  );
+  return result.rows[0];
+};
+
+exports.updateViewColumn = async ({ id, visible, filter_condition, filter_value }) => {
+  const result = await pool.query(
+    'SELECT sp_actualizar_columna_vista($1, $2, $3, $4) AS message',
+    [id, visible, filter_condition, filter_value]
+  );
+  return result.rows[0];
+};
