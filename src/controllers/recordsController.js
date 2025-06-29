@@ -40,9 +40,10 @@ exports.getRecordById = async (req, res) => {
 };
 
 exports.updateRecord = async (req, res) => {
+  console.log("HAY BACKEND: ", req.body);
   try {
     const { record_id } = req.params;
-    const { record_data } = req.body;
+    const  record_data  = req.body;
     const result = await recordsService.updateRecord({ record_id, record_data });
     res.json(result);
   } catch (err) {
