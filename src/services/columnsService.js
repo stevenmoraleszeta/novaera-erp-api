@@ -39,6 +39,21 @@ exports.updateColumn = async ({ column_id, name, data_type, is_required, is_fore
   return result.rows[0];
 };
 
+exports.renameColumnKeyInRecords = async ({ tableId, oldKey, newKey }) => {
+  console.log("ENTRA AL METODO NUEVO");
+  console.log("oldKey:", oldKey, "tipo:", typeof oldKey);
+  console.log("newKey:", newKey, "tipo:", typeof newKey);
+  console.log("tableId:", tableId, "tipo:", typeof tableId);
+  console.log("oldKey JSON:", JSON.stringify(oldKey));
+  console.log("newKey JSON:", JSON.stringify(newKey));
+  await pool.query(
+    `UPDATE records
+    SET record_data = record_data - $1 || jsonb_build_object($2::text, record_data->$1)
+    WHERE table_id = $3 AND record_data ? $1`,
+    [oldKey, newKey, tableId]
+  );
+};
+
 exports.deleteColumn = async (column_id) => {
   const result = await pool.query(
     'SELECT sp_eliminar_columna($1) AS message',

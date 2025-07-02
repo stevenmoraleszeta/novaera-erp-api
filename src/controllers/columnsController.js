@@ -41,9 +41,30 @@ exports.getColumnById = async (req, res) => {
 
 exports.updateColumn = async (req, res) => {
   try {
+    console.log("ACTUALIZA ")
     const { column_id } = req.params;
     const { name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name, column_position, relation_type, validations } = req.body;
+    const currentColumn = await columnsService.getColumnById(column_id);
+  
+    const oldName = currentColumn.name;
+    console.log("COL viejo", oldName)
+    console.log("COL nuevo ", name)
+
+
+
+
     const result = await columnsService.updateColumn({ column_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name, column_position, relation_type, validations });
+    if (oldName !== name) {
+    console.log("CAMBIA EL NOMBRE")
+    const tableId = currentColumn.table_id;
+      await columnsService.renameColumnKeyInRecords({
+        tableId,
+        oldKey: oldName,
+        newKey: name
+      });
+    }
+
+
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
