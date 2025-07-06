@@ -16,13 +16,13 @@ exports.getViewsByTable = async (req, res) => {
 
 exports.createView = async (req, res) => {
   try {
-    const { table_id, name, sort_by, sort_direction } = req.body;
-
+    const { table_id, name, sort_by, sort_direction, position_num } = req.body;
     const result = await viewService.createView({
       table_id,
       name,
       sort_by,
       sort_direction,
+      position_num
     });
 
     res.status(201).json(result);
@@ -93,5 +93,24 @@ exports.updateViewColumn = async (req, res) => {
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+};
+
+exports.updateViewPosition = async (req, res) => {
+
+  try {
+    const { id } = req.params;
+    const { position } = req.body;
+
+    if (position === undefined || isNaN(position)) {
+      return res.status(400).json({ error: 'La nueva posición es requerida y debe ser un número.' });
+    }
+
+    await viewService.updateViewPosition(id, Number(position));
+
+    res.json({ message: 'Posición actualizada correctamente.' });
+  } catch (err) {
+    console.error('Error actualizando posición de vista:', err);
+    res.status(500).json({ error: 'Error actualizando la posición de la vista.' });
   }
 };

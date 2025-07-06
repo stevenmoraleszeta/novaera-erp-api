@@ -1,9 +1,9 @@
 const pool = require('../config/db');
 
-exports.createView = async ({ table_id, name, sort_by = null, sort_direction = 'asc' }) => {
+exports.createView = async ({ table_id, name, sort_by = null, sort_direction = 'asc', position_num }) => {
   const result = await pool.query(
-    'SELECT sp_crear_vista($1, $2, $3, $4) AS message',
-    [table_id, name, sort_by, sort_direction]
+    'SELECT sp_crear_vista($1, $2, $3, $4, $5) AS message',
+    [table_id, name, sort_by, sort_direction, position_num]
   );
   return result.rows[0];
 };
@@ -40,10 +40,10 @@ exports.deleteView = async (view_id) => {
   return result.rows[0];
 };
 
-exports.updateView = async ({ id, name, sort_by, sort_direction }) => {
+exports.updateView = async ({ id, name, sort_by, sort_direction, position_num }) => {
   const result = await pool.query(
-    'SELECT sp_actualizar_vista($1, $2, $3, $4) AS message',
-    [id, name, sort_by, sort_direction]
+    'SELECT sp_actualizar_vista($1, $2, $3, $4, $5) AS message',
+    [id, name, sort_by, sort_direction, position_num]
   );
   return result.rows[0];
 };
@@ -54,4 +54,14 @@ exports.updateViewColumn = async ({ id, visible, filter_condition, filter_value 
     [id, visible, filter_condition, filter_value]
   );
   return result.rows[0];
+};
+
+
+exports.updateViewPosition = async (view_id, newPosition) => {
+    const cleanRecordId = parseInt(view_id, 10);
+  const result = await pool.query(
+    'SELECT sp_actualizar_posicion_vistas($1, $2)',
+    [cleanRecordId, newPosition]
+  );
+  return result;
 };
