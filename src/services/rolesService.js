@@ -1,26 +1,26 @@
 const pool = require('../config/db');
 
 exports.getRoles = async () => {
-  // Retorna id, name, description, active
-  const result = await pool.query('SELECT * FROM obtener_roles()');
+  // Retorna solo los campos que existen en la tabla
+  const result = await pool.query('SELECT * FROM roles ORDER BY name');
   return result.rows;
 };
 
-exports.createRole = async ({ name, description }) => {
-  // Nuevo: acepta descripción
-  const result = await pool.query('SELECT crear_rol($1, $2) AS message', [name, description]);
+exports.createRole = async ({ name }) => {
+  // Solo acepta nombre, sin descripción
+  const result = await pool.query('INSERT INTO roles (name) VALUES ($1) RETURNING *', [name]);
   return result.rows[0];
 };
 
 exports.getRoleById = async (id) => {
-  // Retorna también description y active
-  const result = await pool.query('SELECT * FROM obtener_rol_por_id($1)', [id]);
+  // Retorna solo los campos que existen
+  const result = await pool.query('SELECT * FROM roles WHERE id = $1', [id]);
   return result.rows[0];
 };
 
-exports.updateRole = async (id, { name, description }) => {
-  // Debes crear un SP para actualizar nombre y descripción si no existe
-  const result = await pool.query('UPDATE roles SET name = $1, description = $2 WHERE id = $3 RETURNING *', [name, description, id]);
+exports.updateRole = async (id, { name }) => {
+  // Solo actualiza el nombre
+  const result = await pool.query('UPDATE roles SET name = $1 WHERE id = $2 RETURNING *', [name, id]);
   return result.rows[0];
 };
 

@@ -1,8 +1,57 @@
 const pool = require('../config/db');
 
 exports.getUsers = async () => {
-  const result = await pool.query('SELECT * FROM users');
-  return result.rows;
+  // Query that joins users with their roles
+  const result = await pool.query(`
+    SELECT 
+      u.id,
+      u.name,
+      u.email,
+      u.is_active,
+      u.is_blocked,
+      u.last_login,
+      u.avatar_url,
+      r.name as role_name,
+      r.id as role_id
+    FROM users u
+    LEFT JOIN user_roles ur ON u.id = ur.user_id
+    LEFT JOIN roles r ON ur.role_id = r.id
+    ORDER BY u.id
+  `);
+  
+  // Group users by id and collect their roles
+  const usersMap = new Map();
+  
+  result.rows.forEach(row => {
+    if (!usersMap.has(row.id)) {
+      usersMap.set(row.id, {
+        id: row.id,
+        name: row.name,
+        email: row.email,
+        is_active: row.is_active,
+        is_blocked: row.is_blocked,
+        last_login: row.last_login,
+        avatar_url: row.avatar_url,
+        roles: []
+      });
+    }
+    
+    // Add role if it exists
+    if (row.role_name) {
+      usersMap.get(row.id).roles.push({
+        id: row.role_id,
+        name: row.role_name
+      });
+    }
+  });
+  
+  // Convert map to array and add primary role
+  const users = Array.from(usersMap.values()).map(user => ({
+    ...user,
+    role: user.roles.length > 0 ? user.roles[0].name : 'Sin rol'
+  }));
+  
+  return users;
 };
 
 exports.createUser = async ({ name, email, password_hash }) => {
@@ -88,4 +137,25 @@ exports.setAvatar = async (id, avatar_url) => {
 exports.getUserByEmail = async (email) => {
   const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
   return result.rows[0];
+};
+
+exports.getUserRoles = async (userId) => {
+  const result = await pool.query(`
+    SELECT r.name 
+    FROM roles r 
+    JOIN user_roles ur ON r.id = ur.role_id 
+    WHERE ur.user_id = $1
+  `, [userId]);
+  return result.rows.map(row => row.name);
+};
+
+exports.getUserWithRoles = async (email) => {
+  const user = await exports.getUserByEmail(email);
+  if (!user) return null;
+  
+  const roles = await exports.getUserRoles(user.id);
+  return {
+    ...user,
+    roles
+  };
 };

@@ -6,19 +6,39 @@ require('dotenv').config();
 exports.login = async (req, res) => {
   const { email, password } = req.body;
   try {
-    const user = await usersService.getUserByEmail(email);
+    const user = await usersService.getUserWithRoles(email);
     if (!user) {
       return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
     }
+    
+    // Verificar que el usuario esté activo
+    if (!user.is_active) {
+      return res.status(403).json({ error: 'Tu cuenta está inactiva. Contacta al administrador para activarla.' });
+    }
+    
+    // Verificar que el usuario no esté bloqueado
+    if (user.is_blocked) {
+      return res.status(403).json({ error: 'Tu cuenta está bloqueada. Contacta al administrador.' });
+    }
+    
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) {
       return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
     }
+    
     const token = jwt.sign(
-      { id: user.id, email: user.email, name: user.name, roles: user.roles },
+      { 
+        id: user.id, 
+        email: user.email, 
+        name: user.name, 
+        roles: user.roles,
+        is_active: user.is_active,
+        is_blocked: user.is_blocked 
+      },
       process.env.JWT_SECRET,
       { expiresIn: '8h' }
     );
+    
     res.cookie('token', token, {
       httpOnly: true,
       secure: true, // siempre true en producción para cross-domain
@@ -26,7 +46,19 @@ exports.login = async (req, res) => {
       path: '/',
       maxAge: 8 * 60 * 60 * 1000 // 8 horas
     });
-    res.json({ user: { id: user.id, name: user.name, email: user.email } });
+    
+    res.json({ 
+      user: { 
+        id: user.id, 
+        name: user.name, 
+        email: user.email, 
+        roles: user.roles,
+        is_active: user.is_active,
+        is_blocked: user.is_blocked,
+        last_login: user.last_login,
+        avatar_url: user.avatar_url
+      } 
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -39,7 +71,31 @@ exports.me = async (req, res) => {
   }
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    res.json({ id: decoded.id, name: decoded.name, email: decoded.email, roles: decoded.roles });
+    
+    // Verificar que el usuario siga activo en la base de datos
+    const user = await usersService.getUserByEmail(decoded.email);
+    if (!user) {
+      return res.status(401).json({ error: 'Usuario no encontrado' });
+    }
+    
+    if (!user.is_active) {
+      return res.status(403).json({ error: 'Tu cuenta está inactiva. Contacta al administrador.' });
+    }
+    
+    if (user.is_blocked) {
+      return res.status(403).json({ error: 'Tu cuenta está bloqueada. Contacta al administrador.' });
+    }
+    
+    res.json({ 
+      id: decoded.id, 
+      name: decoded.name, 
+      email: decoded.email, 
+      roles: decoded.roles,
+      is_active: user.is_active,
+      is_blocked: user.is_blocked,
+      last_login: user.last_login,
+      avatar_url: user.avatar_url
+    });
   } catch (err) {
     return res.status(401).json({ error: 'Token inválido o expirado' });
   }
