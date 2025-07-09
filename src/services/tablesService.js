@@ -1,11 +1,25 @@
 const pool = require('../config/db');
 
 exports.createTable = async ({ module_id, name, description, original_table_id, foreign_table_id, position_num}) => {
-  const result = await pool.query(
+
+  let result
+  let response
+
+  if(module_id == null){
+   result = await pool.query(
+    `INSERT INTO tables (name, description, original_table_id, foreign_table_id)
+     VALUES ($1, $2, $3, $4)
+     RETURNING *`,
+    [name, description, original_table_id, foreign_table_id]
+  );
+  response = result.rows[0];
+  } else {
+   result = await pool.query(
     'SELECT crear_tabla_logica($1, $2, $3, $4, $5, $6) AS data',
     [module_id, name, description, original_table_id, foreign_table_id, position_num]
   );
-  const response = result.rows[0].data;
+   response = result.rows[0].data;
+  }
 
   if (response.error) {
     throw new Error(response.error);
