@@ -8,7 +8,7 @@ exports.createModule = async ({ name, description, icon_url, created_by }) => {
   return result.rows[0];
 };
 
-exports.getModules = async (order_by = 'fecha') => {
+exports.getModules = async (order_by) => {
   const result = await pool.query(
     'SELECT * FROM sp_obtener_modulos($1)',
     [order_by]
@@ -24,10 +24,10 @@ exports.getModuleById = async (id) => {
   return result.rows[0];
 };
 
-exports.updateModule = async ({ id, name, description, icon_url }) => {
+exports.updateModule = async ({ id, name, description, icon_url, position_num }) => {
   const result = await pool.query(
-    'SELECT sp_actualizar_modulo($1, $2, $3, $4) AS message',
-    [id, name, description, icon_url]
+    'SELECT sp_actualizar_modulo($1, $2, $3, $4, $5) AS message',
+    [id, name, description, icon_url, position_num]
   );
   return result.rows[0];
 };
@@ -46,4 +46,13 @@ exports.existsTableNameInModule = async (module_id, table_name) => {
     [module_id, table_name]
   );
   return result.rows[0].exists;
+};
+
+exports.updateModulePosition = async (module_id, newPosition) => {
+
+  const result = await pool.query(
+    'SELECT sp_actualizar_posicion_modulo($1, $2)',
+    [module_id, newPosition]
+  );
+  return result;
 };

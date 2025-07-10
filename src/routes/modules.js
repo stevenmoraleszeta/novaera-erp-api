@@ -8,5 +8,6 @@ router.get('/:id', modulesController.getModuleById);
 router.put('/:id', modulesController.updateModule);
 router.delete('/:id', modulesController.deleteModule);
 router.get('/exists/table-name', modulesController.existsTableNameInModule);
+router.patch('/:module_id/update_modules', modulesController.updateModulePosition);
 
 module.exports = router;

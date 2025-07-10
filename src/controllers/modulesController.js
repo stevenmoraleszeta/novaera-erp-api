@@ -33,8 +33,8 @@ exports.getModuleById = async (req, res) => {
 exports.updateModule = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, icon_url } = req.body;
-    const result = await modulesService.updateModule({ id, name, description, icon_url });
+    const { name, description, icon_url, position_num } = req.body;
+    const result = await modulesService.updateModule({ id, name, description, icon_url, position_num });
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -59,5 +59,23 @@ exports.existsTableNameInModule = async (req, res) => {
     res.json({ exists });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+};
+
+exports.updateModulePosition = async (req, res) => {
+  try {
+    const { module_id } = req.params;
+    const { position } = req.body;
+
+    if (position === undefined || isNaN(position)) {
+      return res.status(400).json({ error: 'La nueva posición es requerida y debe ser un número.' });
+    }
+
+    await modulesService.updateModulePosition(module_id, Number(position));
+
+    res.json({ message: 'Posición actualizada correctamente.' });
+  } catch (err) {
+    console.error('Error actualizando posición del módulo:', err);
+    res.status(500).json({ error: 'Error actualizando la posición del módulo.' });
   }
 };
