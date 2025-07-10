@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const rolesService = require('./rolesService');
 
 exports.createTable = async ({ module_id, name, description, original_table_id, foreign_table_id, position_num}) => {
 
@@ -142,6 +143,8 @@ exports.getOrCreateJoinTable = async (tableA_id, tableB_id, forName) => {
   const colA = normA + '_id';
   const colB = normB + '_id';
   const joinTableName = `${normA} - ${normB}`;
+  // Nombre para la tabla física (sin espacios ni guiones)
+  const physicalTableName = `${normA.replace(/\s+/g, '_')}_${normB.replace(/\s+/g, '_')}_join`;
 
   // Crea la tabla lógica en tu sistema
   const insert = await pool.query(
@@ -154,7 +157,7 @@ exports.getOrCreateJoinTable = async (tableA_id, tableB_id, forName) => {
 
   // Crea la tabla física en la base de datos (si aplica)
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS ${joinTableName} (
+    CREATE TABLE IF NOT EXISTS ${physicalTableName} (
       id SERIAL PRIMARY KEY,
       original_record_id INT NOT NULL,
       foreign_record_id INT NOT NULL,
@@ -186,6 +189,25 @@ exports.getOrCreateJoinTable = async (tableA_id, tableB_id, forName) => {
        VALUES ($1, $2, 'select', true, true, $3, $4)`,
       [joinTable.id, 'foreign_record_id', tableB_id, 'id']
     );
+  }
+
+  // Asignar permisos de lectura a todos los roles existentes
+  try {
+    const allRoles = await rolesService.getRoles();
+    for (const role of allRoles) {
+      // Asignar solo permisos de lectura (can_read = true, los demás en false)
+      await rolesService.setRolePermissions(
+        role.id, 
+        joinTable.id, 
+        false, // can_create
+        true,  // can_read
+        false, // can_update
+        false  // can_delete
+      );
+    }
+  } catch (error) {
+    console.error('Error al asignar permisos a roles para la tabla foránea:', error);
+    // No fallar la creación de la tabla si hay error en permisos
   }
 
   return { status: 'created', joinTable };
