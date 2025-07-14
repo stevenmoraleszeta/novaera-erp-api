@@ -16,10 +16,10 @@ exports.getViewsByTable = async (table_id) => {
   return result.rows;
 };
 
-exports.addColumnToView = async ({ view_id, column_id, visible = true, filter_condition = null, filter_value = null, position_num }) => {
+exports.addColumnToView = async ({ view_id, column_id, visible = true, filter_condition = null, filter_value = null, position_num , width_px}) => {
   const result = await pool.query(
-    'SELECT sp_agregar_columnas_a_vista($1, $2, $3, $4, $5, $6) AS message',
-    [view_id, column_id, visible, filter_condition, filter_value, position_num]
+    'SELECT sp_agregar_columnas_a_vista($1, $2, $3, $4, $5, $6, $7) AS message',
+    [view_id, column_id, visible, filter_condition, filter_value, position_num, width_px]
   );
   return result.rows[0];
 };
@@ -48,10 +48,10 @@ exports.updateView = async ({ id, name, sort_by, sort_direction, position_num })
   return result.rows[0];
 };
 
-exports.updateViewColumn = async ({ id, visible, filter_condition, filter_value, position_num }) => {
+exports.updateViewColumn = async ({ id, visible, filter_condition, filter_value, position_num, width_px }) => {
   const result = await pool.query(
-    'SELECT sp_actualizar_columna_vista($1, $2, $3, $4, $5) AS message',
-    [id, visible, filter_condition, filter_value, position_num]
+    'SELECT sp_actualizar_columna_vista($1, $2, $3, $4, $5, $6) AS message',
+    [id, visible, filter_condition, filter_value, position_num, width_px]
   );
   return result.rows[0];
 };

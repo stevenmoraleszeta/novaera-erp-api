@@ -33,7 +33,7 @@ exports.createView = async (req, res) => {
 
 exports.addColumnToView = async (req, res) => {
   try {
-    const { view_id, column_id, visible, filter_condition, filter_value, position_num } = req.body;
+    const { view_id, column_id, visible, filter_condition, filter_value, position_num, width_px } = req.body;
 
     const result = await viewService.addColumnToView({
       view_id,
@@ -41,7 +41,8 @@ exports.addColumnToView = async (req, res) => {
       visible,
       filter_condition,
       filter_value,
-      position_num
+      position_num,
+      width_px
     });
 
     res.status(201).json(result);
