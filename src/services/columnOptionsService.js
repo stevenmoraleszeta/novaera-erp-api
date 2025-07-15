@@ -106,7 +106,7 @@ exports.getAvailableOptions = async (column_id) => {
   });
   
   // Si es una columna de foreign key, obtener opciones de la tabla referenciada
-  if (column.is_foreign_key && column.foreign_table_id && column.foreign_column_name) {
+  if (column.foreign_table_id && column.foreign_column_name) {
     console.log(`Getting options from foreign table ${column.foreign_table_id}, column ${column.foreign_column_name}`);
     
     const tableResult = await pool.query(
