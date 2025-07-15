@@ -2,8 +2,19 @@ const recordsService = require('../services/recordsService');
 
 exports.createRecord = async (req, res) => {
   try {
-    const recordData = req.body;
-    const result = await recordsService.createRecord(recordData);
+    const { table_id, record_data, position_num } = req.body;
+    // Obtener información del usuario desde el token de autenticación
+    const createdBy = req.user?.id || null;
+    const ipAddress = req.ip || req.connection?.remoteAddress;
+    const userAgent = req.get ? req.get('User-Agent') : (req.headers['user-agent'] || '');
+    const result = await recordsService.createRecord({
+      table_id,
+      record_data,
+      position_num,
+      createdBy,
+      ipAddress,
+      userAgent
+    });
     res.status(201).json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });

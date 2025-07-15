@@ -2,35 +2,45 @@ const pool = require('../config/db');
 const filesService = require('./filesService');
 const scheduledNotificationsService = require('./scheduledNotificationsService');
 
+
 class RecordsService {
+  async setAuditUser(client, userId) {
+    if (!userId) {
+      return;
+    }
+    const sanitizedUserId = String(userId).replace(/'/g, "");  
+    await client.query(`SET session "audit.user_id" = '${sanitizedUserId}'`);
+  }
+
+
   // Crear registro
   async createRecord({ table_id, record_data, position_num, createdBy, ipAddress, userAgent }) {
+    const client = await pool.connect();  
     try {
-      const result = await pool.query(
+      await this.setAuditUser(client, createdBy);
+
+      const result = await client.query(
         'SELECT insertar_registro_dinamico($1, $2, $3) AS message',
         [table_id, record_data, position_num]
       );
-      
-      // Obtener el ID del registro creado
-      const recordId = await this.getLastInsertedRecordId(table_id);
-      
-      // Registrar el cambio para notificar suscriptores
-      await scheduledNotificationsService.logRecordChange({
-        tableId: table_id,
-        recordId: recordId,
-        changeType: 'create',
-        oldData: null,
-        newData: record_data,
-        changedBy: createdBy,
-        ipAddress,
-        userAgent
-      });
-      // Devolver el id junto con el mensaje
+
+      const recordIdResult = await client.query(
+        'SELECT id FROM records WHERE table_id = $1 ORDER BY created_at DESC LIMIT 1',
+        [table_id]
+      );
+      const recordId = recordIdResult.rows[0]?.id;
+
       return { id: recordId, ...result.rows[0] };
+
     } catch (error) {
       throw new Error(`Error al crear registro: ${error.message}`);
+    } finally {
+      client.release(); 
     }
   }
+
+
+
 
   // Obtener el último registro insertado
   async getLastInsertedRecordId(tableId) {
@@ -45,7 +55,6 @@ class RecordsService {
     }
   }
 
-  // Obtener registros por tabla con archivos expandidos
   async getRecordsByTable(table_id) {
     try {
       const result = await pool.query(
@@ -53,7 +62,6 @@ class RecordsService {
         [table_id]
       );
       
-      // Expandir archivos en cada registro
       const expandedRecords = await this.expandFileReferences(result.rows);
       return expandedRecords;
     } catch (error) {
@@ -82,16 +90,17 @@ class RecordsService {
 
   // Actualizar registro
   async updateRecord({ record_id, recordData, position_num, updatedBy, ipAddress, userAgent }) {
+    const client = await pool.connect();
     try {
-      // Obtener datos anteriores
+      await this.setAuditUser(client, updatedBy);
+
       const oldRecord = await this.getRecordById(record_id);
-      
-      const result = await pool.query(
+
+      const result = await client.query(
         'SELECT actualizar_registro_dinamico($1, $2, $3) AS message',
         [record_id, recordData, position_num]
       );
-      
-      // Registrar el cambio para notificar suscriptores
+
       await scheduledNotificationsService.logRecordChange({
         tableId: oldRecord.table_id,
         recordId: record_id,
@@ -102,25 +111,30 @@ class RecordsService {
         ipAddress,
         userAgent
       });
-      
+
       return result.rows[0];
+
     } catch (error) {
       throw new Error(`Error al actualizar registro: ${error.message}`);
+    } finally {
+      client.release();
     }
   }
 
+
   // Eliminar registro
   async deleteRecord(record_id, deletedBy, ipAddress, userAgent) {
+    const client = await pool.connect();  
     try {
-      // Obtener datos antes de eliminar
+      await this.setAuditUser(client, deletedBy);
+
       const oldRecord = await this.getRecordById(record_id);
-      
-      const result = await pool.query(
+
+      const result = await client.query(
         'SELECT eliminar_registro_dinamico($1) AS message',
         [record_id]
       );
-      
-      // Registrar el cambio para notificar suscriptores
+
       await scheduledNotificationsService.logRecordChange({
         tableId: oldRecord.table_id,
         recordId: record_id,
@@ -131,12 +145,16 @@ class RecordsService {
         ipAddress,
         userAgent
       });
-      
+
       return result.rows[0];
+
     } catch (error) {
       throw new Error(`Error al eliminar registro: ${error.message}`);
+    } finally {
+      client.release(); 
     }
   }
+
 
   // Buscar registros por valor
   async searchRecordsByValue(table_id, value) {
