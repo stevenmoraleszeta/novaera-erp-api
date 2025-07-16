@@ -43,6 +43,12 @@ exports.createColumn = async (req, res) => {
       }
     }
 
+    await columnsService.addFieldToAllRecords({
+      tableId: columnData.table_id,
+      columnName: columnData.name,
+      defaultValue: "",
+    });
+
     res.status(201).json(result);
   } catch (err) {
     console.error('Error in createColumn:', err);
@@ -75,19 +81,19 @@ exports.updateColumn = async (req, res) => {
     const { column_id } = req.params;
     const { custom_options, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name, column_position, relation_type, validations } = req.body;
     const currentColumn = await columnsService.getColumnById(column_id);
-  
+
     const oldName = currentColumn.name;
 
     const result = await columnsService.updateColumn({ column_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name, column_position, relation_type, validations });
-    
+
     // Si es una columna de tipo selección con opciones personalizadas
     if (data_type === 'select' && custom_options && Array.isArray(custom_options)) {
       // Actualizar las opciones personalizadas
       await columnOptionsService.createColumnOptions(column_id, custom_options);
     }
-    
+
     if (oldName !== name) {
-    const tableId = currentColumn.table_id;
+      const tableId = currentColumn.table_id;
       await columnsService.renameColumnKeyInRecords({
         tableId,
         oldKey: oldName,
@@ -155,7 +161,7 @@ exports.getColumnsByTableWithOptions = async (req, res) => {
   try {
     const { table_id } = req.params;
     const columns = await columnsService.getColumnsByTable(table_id);
-    
+
     // Para cada columna de tipo selección, obtener sus opciones personalizadas
     for (let column of columns) {
       if (column.data_type === 'select') {
@@ -163,7 +169,7 @@ exports.getColumnsByTableWithOptions = async (req, res) => {
         column.custom_options = customOptions;
       }
     }
-    
+
     res.json(columns);
   } catch (err) {
     res.status(500).json({ error: err.message });
