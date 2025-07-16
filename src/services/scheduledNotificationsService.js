@@ -15,8 +15,8 @@ class ScheduledNotificationsService {
     const query = `
       INSERT INTO scheduled_notifications (
         table_id, record_id, column_id, target_date, notification_title, 
-        notification_message, notify_before_days, assigned_users, created_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        notification_message, notify_before_days, assigned_users, created_by, read
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *
     `;
     
@@ -27,7 +27,7 @@ class ScheduledNotificationsService {
     
     const result = await pool.query(query, [
       table_id, record_id, column_id, target_date, notification_title,
-      notification_message, notify_before_days || 0, usersArray, created_by
+      notification_message, notify_before_days || 0, usersArray, created_by, false
     ]);
     
     return result.rows[0];

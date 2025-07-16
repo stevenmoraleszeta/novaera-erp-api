@@ -101,6 +101,42 @@ class RecordsService {
         [record_id, recordData, position_num]
       );
 
+      // Notificar a los usuarios asignados si existen
+      try {
+        const assignedUsersService = require('./recordAssignedUsersService');
+        const assignedUsers = await assignedUsersService.getAssignedUsersByRecord(record_id);
+        if (assignedUsers && assignedUsers.length > 0) {
+          // Obtener el module_id de la tabla
+          let moduleId = null;
+          try {
+            const tableRes = await pool.query('SELECT module_id FROM tables WHERE id = $1', [oldRecord.table_id]);
+            moduleId = tableRes.rows[0]?.module_id;
+          } catch (modErr) {
+            console.error('No se pudo obtener el module_id de la tabla:', modErr);
+          }
+          for (const user of assignedUsers) {
+            // Obtener el nombre del módulo
+            let moduleName = '';
+            try {
+              if (moduleId) {
+                const modRes = await pool.query('SELECT name FROM modules WHERE id = $1', [moduleId]);
+                moduleName = modRes.rows[0]?.name || '';
+              }
+            } catch (modNameErr) {
+              console.error('No se pudo obtener el nombre del módulo:', modNameErr);
+            }
+            await scheduledNotificationsService.createNotificationForUser(
+              user.user_id,
+              'Registro actualizado',
+              `El registro #${record_id} al que estás asignado ha sido actualizado en el módulo "${moduleName}".`,
+              moduleId ? `/modulos/${moduleId}` : `/modulos` // Fallback si no se encuentra el módulo
+            );
+          }
+        }
+      } catch (notifyError) {
+        console.error('Error notificando usuarios asignados:', notifyError);
+      }
+
       await scheduledNotificationsService.logRecordChange({
         tableId: oldRecord.table_id,
         recordId: record_id,

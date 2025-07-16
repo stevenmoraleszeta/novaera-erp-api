@@ -28,6 +28,8 @@ exports.setAssignedUsersForRecord = async (record_id, user_ids = []) => {
       `INSERT INTO record_assigned_users (record_id, user_id) VALUES ${values}`,
       [record_id, ...user_ids]
     );
+    // Notificar a cada usuario asignado
+    
   }
   return true;
 };
