@@ -12,12 +12,28 @@ exports.getColumns = async (req, res) => {
 
 exports.createColumn = async (req, res) => {
   try {
-    const { custom_options, ...columnData } = req.body;
+    const { custom_options, related_table_name, related_table_description, ...columnData } = req.body;
     console.log('---[CREATE COLUMN]---');
     console.log('Column data:', columnData);
     console.log('Custom options:', custom_options);
+    console.log('Related table name:', related_table_name);
 
-    // Crear la columna primero
+    // Si es columna tipo 'tabla', crear la tabla relacionada primero
+    let relatedTable = null;
+    if (columnData.data_type === 'tabla' && related_table_name) {
+      // Puedes ajustar el nombre del campo data_type si usas otro valor
+      relatedTable = await columnsService.createRelatedTable({
+        name: related_table_name,
+        description: related_table_description || '',
+        module_id: null,
+        original_table_id: columnData.table_id,
+        position_num: columnData.column_position || 0
+      });
+      // Puedes guardar el id de la tabla relacionada en la columna si lo necesitas
+      columnData.foreign_table_id = relatedTable.id;
+    }
+
+    // Crear la columna
     const result = await columnsService.createColumn(columnData);
     console.log('Column creation result:', result);
 
@@ -43,7 +59,8 @@ exports.createColumn = async (req, res) => {
       }
     }
 
-    res.status(201).json(result);
+    // Responder con la columna y la tabla relacionada si aplica
+    res.status(201).json({ column: result, relatedTable });
   } catch (err) {
     console.error('Error in createColumn:', err);
     res.status(500).json({ error: err.message, stack: err.stack });

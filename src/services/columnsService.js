@@ -1,3 +1,28 @@
+// Crear una nueva tabla vacía relacionada con original_table_id
+exports.createRelatedTable = async ({ name, description = '', module_id = null, original_table_id, position_num = 0 }) => {
+  // Inserta en la tabla 'tables' los campos básicos
+  const result = await pool.query(
+    `INSERT INTO tables (name, description, module_id, original_table_id, position_num)
+     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+    [name, description, module_id, original_table_id, position_num]
+  );
+  const newTable = result.rows[0];
+
+  // Crear columna 'Nombre' de tipo texto en la nueva tabla
+  await exports.createColumn({
+    table_id: newTable.id,
+    name: 'Nombre',
+    data_type: 'text',
+    is_required: true,
+    is_foreign_key: false,
+    foreign_table_id: null,
+    foreign_column_name: null,
+    column_position: 0,
+    relation_type: null,
+    validations: null
+  });
+  return newTable;
+};
 const pool = require('../config/db');
 
 exports.getColumns = async () => {
