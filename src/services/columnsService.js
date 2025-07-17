@@ -34,7 +34,7 @@ exports.getColumns = async () => {
 exports.createColumn = async ({ table_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name, column_position, relation_type, validations }) => {
   const result = await pool.query(
     'SELECT * FROM sp_crear_columna($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
-    [table_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name, column_position, relation_type, validations ]
+    [table_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name, column_position, relation_type, validations]
   );
   return result.rows[0];
 };
@@ -59,7 +59,7 @@ exports.getColumnById = async (column_id) => {
 exports.updateColumn = async ({ column_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name, column_position, relation_type, validations }) => {
   const result = await pool.query(
     'SELECT sp_actualizar_columna($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) AS message',
-    [column_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name, column_position, relation_type, validations ]
+    [column_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name, column_position, relation_type, validations]
   );
   return result.rows[0];
 };
@@ -70,6 +70,26 @@ exports.renameColumnKeyInRecords = async ({ tableId, oldKey, newKey }) => {
     SET record_data = record_data - $1 || jsonb_build_object($2::text, record_data->$1)
     WHERE table_id = $3 AND record_data ? $1`,
     [oldKey, newKey, tableId]
+  );
+};
+
+
+exports.addFieldToAllRecords = async ({ tableId, columnName, defaultValue }) => {
+  console.log("adding info to records:", tableId, columnName, defaultValue);
+
+  const safeValue = defaultValue === undefined ? null : defaultValue;
+
+  await pool.query(
+    `UPDATE records
+     SET record_data = jsonb_set(
+       COALESCE(record_data, '{}'::jsonb),
+       $1::text[],
+       to_jsonb($2::text),
+       true
+     )
+     WHERE table_id = $3
+       AND NOT (COALESCE(record_data, '{}'::jsonb) ? $4);`,
+    [[columnName], String(safeValue), tableId, columnName]
   );
 };
 
