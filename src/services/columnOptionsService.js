@@ -43,11 +43,32 @@ exports.getColumnOptions = async (column_id) => {
 
 // Actualizar una opción específica
 exports.updateColumnOption = async (option_id, option_data) => {
-  const { option_value, option_label, option_order, is_active } = option_data;
-  const result = await pool.query(
-    'UPDATE column_options SET option_value = $1, option_label = $2, option_order = $3, is_active = $4 WHERE id = $5 RETURNING *',
-    [option_value, option_label, option_order, is_active, option_id]
-  );
+  // Construir dinámicamente el query y los valores
+  const fields = [];
+  const values = [];
+  let idx = 1;
+  if (option_data.option_value !== undefined) {
+    fields.push(`option_value = $${idx++}`);
+    values.push(option_data.option_value);
+  }
+  if (option_data.option_label !== undefined) {
+    fields.push(`option_label = $${idx++}`);
+    values.push(option_data.option_label);
+  }
+  if (option_data.option_order !== undefined) {
+    fields.push(`option_order = $${idx++}`);
+    values.push(option_data.option_order);
+  }
+  if (option_data.is_active !== undefined) {
+    fields.push(`is_active = $${idx++}`);
+    values.push(option_data.is_active);
+  }
+  if (fields.length === 0) {
+    throw new Error('No hay campos para actualizar');
+  }
+  values.push(option_id);
+  const query = `UPDATE column_options SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`;
+  const result = await pool.query(query, values);
   return result.rows[0];
 };
 
