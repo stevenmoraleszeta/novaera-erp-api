@@ -91,6 +91,7 @@ exports.updateViewColumn = async (req, res) => {
   try {
     const { id } = req.params;
     const updatedData = req.body;
+    console.log("clap data", updatedData)
     const result = await viewService.updateViewColumn({ id, ...updatedData });
     res.json(result);
   } catch (err) {
@@ -136,16 +137,16 @@ exports.updateViewColumnPosition = async (req, res) => {
   }
 };
 
-  exports.deleteViewColumn = async (req, res) => {
-    try {
-      const { id } = req.params; // ← este es el id del view_column
+exports.deleteViewColumn = async (req, res) => {
+  try {
+    const { id } = req.params; // ← este es el id del view_column
 
-      const result = await viewService.deleteViewColumn(id);
-      res.json({ message: 'Columna eliminada de la vista correctamente.', result });
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
-  };
+    const result = await viewService.deleteViewColumn(id);
+    res.json({ message: 'Columna eliminada de la vista correctamente.', result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 
 
 
