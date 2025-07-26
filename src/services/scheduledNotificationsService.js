@@ -460,6 +460,97 @@ class ScheduledNotificationsService {
       return null;
     }
   }
+
+  // Obtener notificaciones que deben ser enviadas (fecha objetivo alcanzada)
+  async getNotificationsDueForSending() {
+    const query = `
+      SELECT sn.*, t.name as table_name, c.name as column_name
+      FROM scheduled_notifications sn
+      LEFT JOIN tables t ON sn.table_id = t.id
+      LEFT JOIN columns c ON sn.column_id = c.id
+      WHERE sn.is_active = true 
+        AND (sn.sent = false OR sn.sent IS NULL)
+        AND sn.target_date <= NOW()
+      ORDER BY sn.target_date ASC
+    `;
+    
+    const result = await pool.query(query);
+    return result.rows;
+  }
+
+  // Procesar notificaciones programadas que han alcanzado su fecha objetivo
+  async processDueNotifications() {
+    try {
+      const dueNotifications = await this.getNotificationsDueForSending();
+      let processedCount = 0;
+
+      for (const notification of dueNotifications) {
+        try {
+          // Crear notificación en la tabla notifications para cada usuario asignado
+          if (notification.assigned_users && notification.assigned_users.length > 0) {
+            for (const userId of notification.assigned_users) {
+              await this.createNotificationInTable(
+                userId,
+                notification.notification_title,
+                notification.notification_message,
+                `/tables/${notification.table_id}/records/${notification.record_id}`
+              );
+            }
+          }
+
+          // Marcar la notificación programada como enviada
+          await this.markNotificationSent(notification.id);
+          processedCount++;
+
+          console.log(`Notificación procesada: ${notification.notification_title} para ${notification.assigned_users?.length || 0} usuarios`);
+        } catch (error) {
+          console.error(`Error procesando notificación ${notification.id}:`, error);
+        }
+      }
+
+      return processedCount;
+    } catch (error) {
+      console.error('Error en processDueNotifications:', error);
+      throw error;
+    }
+  }
+
+  // Crear notificación en la tabla notifications
+  async createNotificationInTable(userId, title, message, linkToModule) {
+    const query = `
+      INSERT INTO notifications (user_id, title, message, link_to_module, read, created_at)
+      VALUES ($1, $2, $3, $4, $5, NOW())
+      RETURNING *
+    `;
+    
+    const result = await pool.query(query, [
+      parseInt(userId),
+      title,
+      message || '',
+      linkToModule || null,
+      false
+    ]);
+    
+    return result.rows[0];
+  }
+
+  // Marcar notificación programada como enviada
+  async markNotificationSent(id) {
+    const query = `
+      UPDATE scheduled_notifications 
+      SET sent = true, sent_at = NOW()
+      WHERE id = $1
+      RETURNING *
+    `;
+    
+    const result = await pool.query(query, [id]);
+    return result.rows[0];
+  }
+
+  // Función para compatibilidad con el scheduler existente
+  async processDailyNotifications() {
+    return await this.processDueNotifications();
+  }
 }
 
 module.exports = new ScheduledNotificationsService();

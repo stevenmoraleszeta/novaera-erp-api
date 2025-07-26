@@ -23,6 +23,9 @@ const viewSortRoutes = require('./routes/viewSortRoutes');
 
 const auditLogRoutes = require('./routes/auditLog');
 
+// Importar y iniciar el scheduler de notificaciones
+const notificationScheduler = require('./jobs/notificationScheduler');
+
 const app = express();
 
 app.set('trust proxy', 1);
@@ -66,5 +69,8 @@ app.use('/api', columnOptionsRoutes);
 app.use('/api/view-sorts', viewSortRoutes);
 
 app.use('/api/audit-log', auditLogRoutes);
+
+// Iniciar el scheduler de notificaciones programadas
+notificationScheduler.start();
 
 module.exports = app;
