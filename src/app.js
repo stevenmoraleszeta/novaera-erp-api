@@ -16,6 +16,7 @@ const filesRoutes = require('./routes/files');
 const scheduledNotificationsRoutes = require('./routes/scheduledNotifications');
 const recordAssignedUsersRoutes = require('./routes/recordAssignedUsers');
 const recordCommentsRoutes = require('./routes/recordComments');
+const tableCollaboratorsRoutes = require('./routes/tableCollaborators');
 
 const columnOptionsRoutes = require('./routes/columnOptions');
 
@@ -65,6 +66,7 @@ app.use('/api/files', filesRoutes);
 app.use('/api/scheduled-notifications', scheduledNotificationsRoutes);
 app.use('/api/record-assigned-users', recordAssignedUsersRoutes);
 app.use('/api/record-comments', recordCommentsRoutes);
+app.use('/api/table-collaborators', tableCollaboratorsRoutes);
 app.use('/api', columnOptionsRoutes);
 app.use('/api/view-sorts', viewSortRoutes);
 
