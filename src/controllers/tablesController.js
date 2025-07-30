@@ -128,3 +128,27 @@ exports.updateTablePosition = async (req, res) => {
     res.status(500).json({ error: 'Error actualizando la posición de la tabla.' });
   }
 };
+
+exports.validateUniqueValue = async (req, res) => {
+  try {
+    const { tableId } = req.params;
+    const { column, value, excludeId } = req.query; 
+
+    if (!column || value === undefined) {
+      return res.status(400).json({ error: 'Faltan los parámetros column o value.' });
+    }
+
+    const isUnique = await tablesService.isValueUnique({
+      tableId,
+      column,
+      value,
+      excludeId
+    });
+    
+    // Responde al frontend con { "isUnique": true } o { "isUnique": false }
+    res.json({ isUnique });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

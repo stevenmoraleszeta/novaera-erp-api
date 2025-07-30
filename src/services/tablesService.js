@@ -284,3 +284,11 @@ exports.getOrCreateJoinTable = async (tableA_id, tableB_id, displayColumn) => {
   );
   return result;
 };
+
+exports.isValueUnique = async ({ tableId, column, value, excludeId }) => {
+  const result = await pool.query(
+    'SELECT sp_check_unique_value($1, $2, $3, $4)',
+    [tableId, column, value, excludeId || null]
+  );
+  return result.rows[0].sp_check_unique_value;
+};

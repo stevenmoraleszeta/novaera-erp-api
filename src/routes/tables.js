@@ -11,5 +11,6 @@ router.get('/exists/name', tablesController.existsTableNameInModule);
 router.get('/', tablesController.getTables);
 router.post('/join', tablesController.getOrCreateJoinTable);
 router.patch('/:table_id/update_tables', tablesController.updateTablePosition);
+router.get('/:tableId/validate-unique', tablesController.validateUniqueValue);
 
 module.exports = router;

@@ -19,7 +19,8 @@ exports.createRelatedTable = async ({ name, description = '', module_id = null, 
     foreign_column_name: null,
     column_position: 0,
     relation_type: null,
-    validations: null
+    validations: null, 
+    is_unique: false,
   });
   return newTable;
 };
@@ -31,10 +32,10 @@ exports.getColumns = async () => {
 };
 
 
-exports.createColumn = async ({ table_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name, column_position, relation_type, validations }) => {
+exports.createColumn = async ({ table_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name, column_position, relation_type, validations, is_unique }) => {
   const result = await pool.query(
-    'SELECT * FROM sp_crear_columna($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
-    [table_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name, column_position, relation_type, validations]
+    'SELECT * FROM sp_crear_columna($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)',
+    [table_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name, column_position, relation_type, validations, is_unique]
   );
   return result.rows[0];
 };
@@ -56,10 +57,10 @@ exports.getColumnById = async (column_id) => {
   return result.rows[0];
 };
 
-exports.updateColumn = async ({ column_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name, column_position, relation_type, validations }) => {
+exports.updateColumn = async ({ column_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name, column_position, relation_type, validations, is_unique }) => {
   const result = await pool.query(
-    'SELECT sp_actualizar_columna($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) AS message',
-    [column_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name, column_position, relation_type, validations]
+    'SELECT sp_actualizar_columna($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) AS message',
+    [column_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name, column_position, relation_type, validations, is_unique]
   );
   return result.rows[0];
 };

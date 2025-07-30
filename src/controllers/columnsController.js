@@ -97,12 +97,12 @@ exports.getColumnById = async (req, res) => {
 exports.updateColumn = async (req, res) => {
   try {
     const { column_id } = req.params;
-    const { custom_options, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name, column_position, relation_type, validations } = req.body;
+    const { custom_options, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name, column_position, relation_type, validations, is_unique } = req.body;
     const currentColumn = await columnsService.getColumnById(column_id);
 
     const oldName = currentColumn.name;
 
-    const result = await columnsService.updateColumn({ column_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name, column_position, relation_type, validations });
+    const result = await columnsService.updateColumn({ column_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name, column_position, relation_type, validations, is_unique });
 
     // Si es una columna de tipo selección con opciones personalizadas
     if (data_type === 'select' && custom_options && Array.isArray(custom_options)) {
