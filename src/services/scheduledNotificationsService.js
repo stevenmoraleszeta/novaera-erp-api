@@ -37,7 +37,7 @@ class ScheduledNotificationsService {
   // Obtener notificaciones programadas de un usuario
   async getUserScheduledNotifications(userId) {
     const query = `
-      SELECT sn.*, t.name as table_name, c.name as column_name
+      SELECT sn.*, t.name as table_name, t.module_id, c.name as column_name
       FROM scheduled_notifications sn
       LEFT JOIN tables t ON sn.table_id = t.id
       LEFT JOIN columns c ON sn.column_id = c.id
@@ -57,7 +57,7 @@ class ScheduledNotificationsService {
   // Obtener notificaciones por tabla
   async getNotificationsByTable(tableId) {
     const query = `
-      SELECT sn.*, t.name as table_name, c.name as column_name
+      SELECT sn.*, t.name as table_name, t.module_id, c.name as column_name
       FROM scheduled_notifications sn
       LEFT JOIN tables t ON sn.table_id = t.id
       LEFT JOIN columns c ON sn.column_id = c.id
@@ -84,7 +84,7 @@ class ScheduledNotificationsService {
   // Obtener notificaciones por registro específico
   async getNotificationsByRecord(tableId, recordId) {
     const query = `
-      SELECT sn.*, t.name as table_name, c.name as column_name
+      SELECT sn.*, t.name as table_name, t.module_id, c.name as column_name
       FROM scheduled_notifications sn
       LEFT JOIN tables t ON sn.table_id = t.id
       LEFT JOIN columns c ON sn.column_id = c.id
@@ -275,7 +275,7 @@ class ScheduledNotificationsService {
   // Obtener notificaciones pendientes (para el scheduler)
   async getPendingNotifications() {
     const query = `
-      SELECT sn.*, t.name as table_name, c.name as column_name
+      SELECT sn.*, t.name as table_name, t.module_id, c.name as column_name
       FROM scheduled_notifications sn
       LEFT JOIN tables t ON sn.table_id = t.id
       LEFT JOIN columns c ON sn.column_id = c.id
@@ -323,7 +323,7 @@ class ScheduledNotificationsService {
   // Obtener todas las notificaciones combinadas de un usuario
   async getAllUserNotifications(userId) {
     const scheduledQuery = `
-      SELECT sn.*, t.name as table_name, c.name as column_name, 'scheduled' as notification_type
+      SELECT sn.*, t.name as table_name, t.module_id, c.name as column_name, 'scheduled' as notification_type
       FROM scheduled_notifications sn
       LEFT JOIN tables t ON sn.table_id = t.id
       LEFT JOIN columns c ON sn.column_id = c.id
@@ -333,7 +333,7 @@ class ScheduledNotificationsService {
     `;
     
     const generalQuery = `
-      SELECT n.*, 'general' as notification_type, t.name as table_name, t.id as table_id
+      SELECT n.*, 'general' as notification_type, t.name as table_name, t.id as table_id, t.module_id
       FROM notifications n
       LEFT JOIN tables t ON n.link_to_module LIKE '/modulos/%' 
         AND CAST(SUBSTRING(n.link_to_module FROM '/modulos/(.*)') AS INTEGER) = t.id
@@ -359,14 +359,14 @@ class ScheduledNotificationsService {
   }
 
   // Crear notificación general para usuario
-  async createNotificationForUser(userId, title, message, linkToModule) {
+  async createNotificationForUser(userId, title, message, linkToModule, recordId = null) {
     const query = `
-      INSERT INTO notifications (user_id, title, message, link_to_module)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO notifications (user_id, title, message, link_to_module, record_id)
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING *
     `;
 
-    const result = await pool.query(query, [userId, title, message, linkToModule]);
+    const result = await pool.query(query, [userId, title, message, linkToModule, recordId]);
     return result.rows[0];
   }
 
@@ -464,12 +464,12 @@ class ScheduledNotificationsService {
   // Obtener notificaciones que deben ser enviadas (fecha objetivo alcanzada)
   async getNotificationsDueForSending() {
     const query = `
-      SELECT sn.*, t.name as table_name, c.name as column_name
+      SELECT sn.*, t.name as table_name, t.module_id, c.name as column_name
       FROM scheduled_notifications sn
       LEFT JOIN tables t ON sn.table_id = t.id
       LEFT JOIN columns c ON sn.column_id = c.id
       WHERE sn.is_active = true 
-        AND (sn.sent = false OR sn.sent IS NULL)
+        AND (sn.notification_sent = false OR sn.notification_sent IS NULL)
         AND sn.target_date <= NOW()
       ORDER BY sn.target_date ASC
     `;
@@ -493,7 +493,8 @@ class ScheduledNotificationsService {
                 userId,
                 notification.notification_title,
                 notification.notification_message,
-                `/tables/${notification.table_id}/records/${notification.record_id}`
+                `/modulos/${notification.module_id}`, // Usar module_id para la navegación
+                notification.record_id // Agregar record_id para navegación directa al registro
               );
             }
           }
@@ -516,10 +517,10 @@ class ScheduledNotificationsService {
   }
 
   // Crear notificación en la tabla notifications
-  async createNotificationInTable(userId, title, message, linkToModule) {
+  async createNotificationInTable(userId, title, message, linkToModule, recordId = null) {
     const query = `
-      INSERT INTO notifications (user_id, title, message, link_to_module, read, created_at)
-      VALUES ($1, $2, $3, $4, $5, NOW())
+      INSERT INTO notifications (user_id, title, message, link_to_module, record_id, read, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, NOW())
       RETURNING *
     `;
     
@@ -528,22 +529,10 @@ class ScheduledNotificationsService {
       title,
       message || '',
       linkToModule || null,
+      recordId || null,
       false
     ]);
     
-    return result.rows[0];
-  }
-
-  // Marcar notificación programada como enviada
-  async markNotificationSent(id) {
-    const query = `
-      UPDATE scheduled_notifications 
-      SET sent = true, sent_at = NOW()
-      WHERE id = $1
-      RETURNING *
-    `;
-    
-    const result = await pool.query(query, [id]);
     return result.rows[0];
   }
 

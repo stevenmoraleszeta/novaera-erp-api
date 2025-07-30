@@ -129,7 +129,8 @@ class RecordsService {
               user.user_id,
               'Registro actualizado',
               `El registro #${record_id} al que estás asignado ha sido actualizado en el módulo "${moduleName}".`,
-              moduleId ? `/modulos/${moduleId}` : `/modulos` // Fallback si no se encuentra el módulo
+              moduleId ? `/modulos/${moduleId}` : `/modulos`, // Fallback si no se encuentra el módulo
+              record_id // Agregar record_id para navegación directa
             );
           }
         }
