@@ -8,14 +8,14 @@ class RecordsService {
     if (!userId) {
       return;
     }
-    const sanitizedUserId = String(userId).replace(/'/g, "");  
+    const sanitizedUserId = String(userId).replace(/'/g, "");
     await client.query(`SET session "audit.user_id" = '${sanitizedUserId}'`);
   }
 
 
   // Crear registro
   async createRecord({ table_id, record_data, position_num, createdBy, ipAddress, userAgent }) {
-    const client = await pool.connect();  
+    const client = await pool.connect();
     try {
       await this.setAuditUser(client, createdBy);
 
@@ -35,7 +35,7 @@ class RecordsService {
     } catch (error) {
       throw new Error(`Error al crear registro: ${error.message}`);
     } finally {
-      client.release(); 
+      client.release();
     }
   }
 
@@ -61,7 +61,7 @@ class RecordsService {
         'SELECT * FROM obtener_registros_por_tabla($1)',
         [table_id]
       );
-      
+
       const expandedRecords = await this.expandFileReferences(result.rows);
       return expandedRecords;
     } catch (error) {
@@ -76,11 +76,11 @@ class RecordsService {
         'SELECT * FROM obtener_registro_por_id($1)',
         [record_id]
       );
-      
+
       if (result.rows.length === 0) {
         throw new Error('Registro no encontrado');
       }
-      
+
       const expandedRecords = await this.expandFileReferences(result.rows);
       return expandedRecords[0];
     } catch (error) {
@@ -158,10 +158,34 @@ class RecordsService {
     }
   }
 
+async updateAllOriginalRecordIds({ tableId, oldValue = 2147483647, newValue }) {
+  const client = await pool.connect();
+  console.log("mtg ALL TABLES", oldValue, newValue);
+  try {
+    await client.query(
+      `UPDATE records
+       SET record_data = jsonb_set(record_data, '{original_record_id}', to_jsonb($1::int), true)
+       WHERE 
+         record_data->>'original_record_id' IS NULL
+         OR record_data->>'original_record_id' = ''
+         OR (
+           record_data->>'original_record_id' ~ '^[0-9]+$'
+           AND (record_data->>'original_record_id')::int = $2
+         )`,
+      [newValue, oldValue]
+    );
+    return { message: "Registros de todas las tablas actualizados correctamente." };
+  } catch (error) {
+    throw new Error(`Error al actualizar original_record_id: ${error.message}`);
+  } finally {
+    client.release();
+  }
+}
+
 
   // Eliminar registro
   async deleteRecord(record_id, deletedBy, ipAddress, userAgent) {
-    const client = await pool.connect();  
+    const client = await pool.connect();
     try {
       await this.setAuditUser(client, deletedBy);
 
@@ -188,7 +212,7 @@ class RecordsService {
     } catch (error) {
       throw new Error(`Error al eliminar registro: ${error.message}`);
     } finally {
-      client.release(); 
+      client.release();
     }
   }
 
@@ -200,7 +224,7 @@ class RecordsService {
         'SELECT * FROM buscar_registros_por_valor($1, $2)',
         [table_id, value]
       );
-      
+
       const expandedRecords = await this.expandFileReferences(result.rows);
       return expandedRecords;
     } catch (error) {
@@ -211,24 +235,24 @@ class RecordsService {
   // Expandir referencias de archivos
   async expandFileReferences(records) {
     const expandedRecords = [];
-    
+
     for (const record of records) {
       const expandedRecord = { ...record };
-      
+
       if (record.record_data) {
         expandedRecord.record_data = await this.expandFiles(record.record_data);
       }
-      
+
       expandedRecords.push(expandedRecord);
     }
-    
+
     return expandedRecords;
   }
 
   // Expandir archivos en el JSON
   async expandFiles(recordData) {
     const expanded = { ...recordData };
-    
+
     for (const [key, value] of Object.entries(expanded)) {
       if (value && typeof value === 'object') {
         // Archivo individual
@@ -265,7 +289,7 @@ class RecordsService {
         }
       }
     }
-    
+
     return expanded;
   }
 }
@@ -279,6 +303,7 @@ exports.getRecordById = recordsService.getRecordById.bind(recordsService);
 exports.updateRecord = recordsService.updateRecord.bind(recordsService);
 exports.deleteRecord = recordsService.deleteRecord.bind(recordsService);
 exports.searchRecordsByValue = recordsService.searchRecordsByValue.bind(recordsService);
+exports.updateAllOriginalRecordIds = recordsService.updateAllOriginalRecordIds.bind(recordsService);
 
 exports.countRecordsByTable = async (table_id) => {
   const result = await pool.query(
@@ -298,7 +323,7 @@ exports.existsFieldInRecords = async (table_id, field_name) => {
 
 exports.updateRecordPosition = async (record_id, newPosition) => {
   const cleanRecordId = parseInt(record_id, 10);
-  
+
   const result = await pool.query(
     'SELECT sp_actualizar_posicion_registro($1, $2)',
     [cleanRecordId, newPosition]

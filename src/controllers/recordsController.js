@@ -54,23 +54,42 @@ exports.updateRecord = async (req, res) => {
   try {
     const { record_id } = req.params;
     const { recordData, position_num } = req.body;
-    
+
     // Obtener información del usuario desde el token de autenticación
     const updatedBy = req.user?.id || null;
     const ipAddress = req.ip || req.connection.remoteAddress;
     const userAgent = req.get('User-Agent');
-    
-    const result = await recordsService.updateRecord({ 
-      record_id, 
-      recordData, 
-      position_num, 
-      updatedBy, 
-      ipAddress, 
-      userAgent 
+
+    const result = await recordsService.updateRecord({
+      record_id,
+      recordData,
+      position_num,
+      updatedBy,
+      ipAddress,
+      userAgent
     });
-    
+
     res.json(result);
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.updateOriginalRecordIds = async (req, res) => {
+  try {
+    const { tableId } = req.params;
+    const { oldValue, newValue } = req.body
+    
+    console.log("mtg ID", tableId,  oldValue, newValue)
+    const result = await recordsService.updateAllOriginalRecordIds({
+      tableId: parseInt(tableId),
+      oldValue: oldValue,
+      newValue: newValue,
+    });
+    res.json(result);
+    console.log("mtg", result)
+  } catch (err) {
+    console.log("mtg error", err)
     res.status(500).json({ error: err.message });
   }
 };
@@ -78,12 +97,12 @@ exports.updateRecord = async (req, res) => {
 exports.deleteRecord = async (req, res) => {
   try {
     const { record_id } = req.params;
-    
+
     // Obtener información del usuario desde el token de autenticación
     const deletedBy = req.user?.id || null;
     const ipAddress = req.ip || req.connection.remoteAddress;
     const userAgent = req.get('User-Agent');
-    
+
     const result = await recordsService.deleteRecord(record_id, deletedBy, ipAddress, userAgent);
     res.json(result);
   } catch (err) {
