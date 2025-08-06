@@ -12,5 +12,5 @@ router.get('/table/:table_id/count', recordsController.countRecordsByTable);
 router.get('/table/:table_id/exists-field', recordsController.existsFieldInRecords);
 router.patch('/:record_id/update_records', recordsController.updateRecordPosition);
 router.put('/update-original-ids/:tableId', recordsController.updateOriginalRecordIds);
-
+router.delete('/delete-by-original-id/:tableId',recordsController.deleteByOriginalRecordId);
 module.exports = router;

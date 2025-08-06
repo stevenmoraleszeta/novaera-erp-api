@@ -158,12 +158,12 @@ class RecordsService {
     }
   }
 
-async updateAllOriginalRecordIds({ tableId, oldValue = 2147483647, newValue }) {
-  const client = await pool.connect();
-  console.log("mtg ALL TABLES", oldValue, newValue);
-  try {
-    await client.query(
-      `UPDATE records
+  async updateAllOriginalRecordIds({ tableId, oldValue = 2147483647, newValue }) {
+    const client = await pool.connect();
+    console.log("mtg ALL TABLES", oldValue, newValue);
+    try {
+      await client.query(
+        `UPDATE records
        SET record_data = jsonb_set(record_data, '{original_record_id}', to_jsonb($1::int), true)
        WHERE 
          record_data->>'original_record_id' IS NULL
@@ -172,15 +172,39 @@ async updateAllOriginalRecordIds({ tableId, oldValue = 2147483647, newValue }) {
            record_data->>'original_record_id' ~ '^[0-9]+$'
            AND (record_data->>'original_record_id')::int = $2
          )`,
-      [newValue, oldValue]
-    );
-    return { message: "Registros de todas las tablas actualizados correctamente." };
-  } catch (error) {
-    throw new Error(`Error al actualizar original_record_id: ${error.message}`);
-  } finally {
-    client.release();
+        [newValue, oldValue]
+      );
+      return { message: "Registros de todas las tablas actualizados correctamente." };
+    } catch (error) {
+      throw new Error(`Error al actualizar original_record_id: ${error.message}`);
+    } finally {
+      client.release();
+    }
   }
-}
+
+  async deleteRecordsByOriginalRecordId({ tableId, originalRecordId  }) {
+    const client = await pool.connect();
+    console.log("🗑 Eliminando registros con original_record_id =", originalRecordId, "en TODAS las tablas");
+
+    try {
+      await client.query(
+        `DELETE FROM records
+       WHERE record_data->>'original_record_id' IS NOT NULL
+         AND record_data->>'original_record_id' <> ''
+         AND record_data->>'original_record_id' ~ '^[0-9]+$'
+         AND (record_data->>'original_record_id')::int = $1`,
+        [originalRecordId]
+      );
+
+      return { message: `Registros con original_record_id = ${originalRecordId} eliminados correctamente en todas las tablas.` };
+    } catch (error) {
+      throw new Error(`Error al eliminar registros: ${error.message}`);
+    } finally {
+      client.release();
+    }
+  }
+
+
 
 
   // Eliminar registro
@@ -304,6 +328,8 @@ exports.updateRecord = recordsService.updateRecord.bind(recordsService);
 exports.deleteRecord = recordsService.deleteRecord.bind(recordsService);
 exports.searchRecordsByValue = recordsService.searchRecordsByValue.bind(recordsService);
 exports.updateAllOriginalRecordIds = recordsService.updateAllOriginalRecordIds.bind(recordsService);
+exports.deleteRecordsByOriginalRecordId = recordsService.deleteRecordsByOriginalRecordId.bind(recordsService);
+
 
 exports.countRecordsByTable = async (table_id) => {
   const result = await pool.query(
