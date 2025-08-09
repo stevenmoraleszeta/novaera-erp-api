@@ -3,7 +3,7 @@ const auditLogService = require('../services/auditLogService');
 // Obtener todos los logs de auditoría
 exports.getAuditLogs = async (req, res) => {
   try {
-    const logs = await auditLogService.getAuditLogs();
+    const logs = await auditLogService.getAuditLogs(req.companySchema);
     res.json(logs);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -14,7 +14,7 @@ exports.getAuditLogs = async (req, res) => {
 exports.getAuditLogsByRecord = async (req, res) => {
   try {
     const { record_id } = req.params;
-    const logs = await auditLogService.getAuditLogsByRecord(record_id);
+    const logs = await auditLogService.getAuditLogsByRecord(record_id, req.companySchema);
     res.json(logs);
   } catch (err) {
     res.status(500).json({ error: err.message });

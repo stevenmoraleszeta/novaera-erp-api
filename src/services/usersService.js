@@ -1,7 +1,7 @@
 const pool = require('../config/db');
 
-exports.getUsers = async () => {
-  // Query that joins users with their roles
+exports.getUsers = async (schemaName = 'public') => {
+  // Query that joins users with their roles using dynamic schema
   const result = await pool.query(`
     SELECT 
       u.id,
@@ -13,9 +13,9 @@ exports.getUsers = async () => {
       u.avatar_url,
       r.name as role_name,
       r.id as role_id
-    FROM users u
-    LEFT JOIN user_roles ur ON u.id = ur.user_id
-    LEFT JOIN roles r ON ur.role_id = r.id
+    FROM ${schemaName}.users u
+    LEFT JOIN ${schemaName}.user_roles ur ON u.id = ur.user_id
+    LEFT JOIN ${schemaName}.roles r ON ur.role_id = r.id
     ORDER BY u.id
   `);
   

@@ -2,7 +2,7 @@ const tablesService = require('../services/tablesService');
 
 exports.getTables = async (req, res) => {
   try {
-    const tables = await tablesService.getTables();
+    const tables = await tablesService.getTables(req.companySchema);
     res.json(tables);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -27,7 +27,7 @@ exports.createTable = async (req, res) => {
       original_table_id,
       foreign_table_id,
       position_num
-    });
+    }, req.companySchema);
     res.status(201).json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -37,7 +37,7 @@ exports.createTable = async (req, res) => {
 exports.getTablesByModule = async (req, res) => {
   try {
     const { module_id } = req.params;
-    const tables = await tablesService.getTablesByModule(module_id);
+    const tables = await tablesService.getTablesByModule(module_id, req.companySchema);
     res.json(tables);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -47,7 +47,7 @@ exports.getTablesByModule = async (req, res) => {
 exports.getTableById = async (req, res) => {
   try {
     const { table_id } = req.params;
-    const table = await tablesService.getTableById(table_id);
+    const table = await tablesService.getTableById(table_id, req.companySchema);
     res.json(table);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -71,7 +71,7 @@ exports.updateTable = async (req, res) => {
       original_table_id,
       foreign_table_id,
       position_num
-    });
+    }, req.companySchema);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -81,7 +81,7 @@ exports.updateTable = async (req, res) => {
 exports.deleteTable = async (req, res) => {
   try {
     const { table_id } = req.params;
-    const result = await tablesService.deleteTable(table_id);
+    const result = await tablesService.deleteTable(table_id, req.companySchema);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -91,7 +91,7 @@ exports.deleteTable = async (req, res) => {
 exports.existsTableNameInModule = async (req, res) => {
   try {
     const { module_id, name } = req.query;
-    const exists = await tablesService.existsTableNameInModule(module_id, name);
+    const exists = await tablesService.existsTableNameInModule(module_id, name, req.companySchema);
     res.json({ exists });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -104,7 +104,7 @@ exports.getOrCreateJoinTable = async (req, res) => {
     if (!tableA_id || !tableB_id) {
       return res.status(400).json({ error: 'tableA_id y tableB_id son requeridos' });
     }
-    const result = await tablesService.getOrCreateJoinTable(tableA_id, tableB_id, forName);
+    const result = await tablesService.getOrCreateJoinTable(tableA_id, tableB_id, forName, req.companySchema);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -120,7 +120,7 @@ exports.updateTablePosition = async (req, res) => {
       return res.status(400).json({ error: 'La nueva posición es requerida y debe ser un número.' });
     }
 
-    await tablesService.updateTablePosition(table_id, Number(position));
+    await tablesService.updateTablePosition(table_id, Number(position), req.companySchema);
 
     res.json({ message: 'Posición actualizada correctamente.' });
   } catch (err) {

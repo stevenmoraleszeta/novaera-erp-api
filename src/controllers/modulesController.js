@@ -3,7 +3,7 @@ const modulesService = require('../services/modulesService');
 exports.getModules = async (req, res) => {
   try {
     const { order_by } = req.query; // 'fecha' o 'nombre'
-    const modules = await modulesService.getModules(order_by);
+    const modules = await modulesService.getModules(order_by, req.companySchema);
     res.json(modules);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -13,7 +13,7 @@ exports.getModules = async (req, res) => {
 exports.createModule = async (req, res) => {
   try {
     const moduleData = req.body;
-    const result = await modulesService.createModule(moduleData);
+    const result = await modulesService.createModule(moduleData, req.companySchema);
     res.status(201).json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -23,7 +23,7 @@ exports.createModule = async (req, res) => {
 exports.getModuleById = async (req, res) => {
   try {
     const { id } = req.params;
-    const module = await modulesService.getModuleById(id);
+    const module = await modulesService.getModuleById(id, req.companySchema);
     res.json(module);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -34,7 +34,7 @@ exports.updateModule = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, description, icon_url, position_num } = req.body;
-    const result = await modulesService.updateModule({ id, name, description, icon_url, position_num });
+    const result = await modulesService.updateModule({ id, name, description, icon_url, position_num }, req.companySchema);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -45,7 +45,7 @@ exports.deleteModule = async (req, res) => {
   try {
     const { id } = req.params;
     const { cascada } = req.query; // true/false
-    const result = await modulesService.deleteModule(id, cascada);
+    const result = await modulesService.deleteModule(id, cascada, req.companySchema);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -55,7 +55,7 @@ exports.deleteModule = async (req, res) => {
 exports.existsTableNameInModule = async (req, res) => {
   try {
     const { module_id, table_name } = req.query;
-    const exists = await modulesService.existsTableNameInModule(module_id, table_name);
+    const exists = await modulesService.existsTableNameInModule(module_id, table_name, req.companySchema);
     res.json({ exists });
   } catch (err) {
     res.status(500).json({ error: err.message });

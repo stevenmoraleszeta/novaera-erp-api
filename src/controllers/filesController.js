@@ -12,7 +12,7 @@ const filesController = {
         mimeType,
         fileDataBase64: fileData,
         userId
-      });
+      }, req.companySchema);
       
       res.json({
         success: true,
@@ -28,7 +28,7 @@ const filesController = {
   async downloadFile(req, res) {
     try {
       const { id } = req.params;
-      const file = await filesService.getFile(id);
+      const file = await filesService.getFile(id, req.companySchema);
       
       res.setHeader('Content-Type', file.mime_type);
       res.setHeader('Content-Disposition', `attachment; filename="${file.original_name}"`);
@@ -45,7 +45,7 @@ const filesController = {
   async viewFile(req, res) {
     try {
       const { id } = req.params;
-      const file = await filesService.getFile(id);
+      const file = await filesService.getFile(id, req.companySchema);
       
       res.setHeader('Content-Type', file.mime_type);
       res.setHeader('Content-Disposition', `inline; filename="${file.original_name}"`);
@@ -62,7 +62,7 @@ const filesController = {
   async getFileInfo(req, res) {
     try {
       const { id } = req.params;
-      const fileInfo = await filesService.getFileInfo(id);
+      const fileInfo = await filesService.getFileInfo(id, req.companySchema);
       
       if (!fileInfo) {
         return res.status(404).json({ error: 'Archivo no encontrado' });
@@ -81,7 +81,7 @@ const filesController = {
       const { id } = req.params;
       const userId = req.user.id;
       
-      const result = await filesService.deleteFile(id, userId);
+      const result = await filesService.deleteFile(id, userId, req.companySchema);
       res.json(result);
     } catch (error) {
       console.error('Error deleting file:', error);
@@ -96,7 +96,7 @@ const filesController = {
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 10;
       
-      const result = await filesService.getFilesByUser(userId, page, limit);
+      const result = await filesService.getFilesByUser(userId, page, limit, req.companySchema);
       res.json(result);
     } catch (error) {
       console.error('Error getting user files:', error);
@@ -108,7 +108,7 @@ const filesController = {
   async validateFile(req, res) {
     try {
       const { id } = req.params;
-      const validation = await filesService.validateFileIntegrity(id);
+      const validation = await filesService.validateFileIntegrity(id, req.companySchema);
       res.json(validation);
     } catch (error) {
       console.error('Error validating file:', error);

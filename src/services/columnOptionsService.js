@@ -1,48 +1,40 @@
 // Servicio para opciones personalizadas de columnas
-const pool = require('../config/db');
+const { getClient } = require('../utils/dbHelper');
 
 // Crear/actualizar opciones personalizadas para una columna
-exports.createColumnOptions = async (column_id, options) => {
-  const client = await pool.connect();
+exports.createColumnOptions = async (column_id, options, schemaName='public', existingClient=null) => {
+  const { client, release } = await getClient({ schemaName, existingClient });
+  let localTx = false;
   try {
-    await client.query('BEGIN');
-    
-    // Insertar nuevas opciones
+    if (!existingClient) { await client.query('BEGIN'); localTx = true; }
     if (options && options.length > 0) {
       for (let i = 0; i < options.length; i++) {
         const option = options[i];
-        // Si es string simple, usar como valor y etiqueta
         const optionValue = typeof option === 'string' ? option : option.value;
         const optionLabel = typeof option === 'string' ? option : option.label;
-        
-        await client.query(
-          'INSERT INTO column_options (column_id, option_value, option_label, option_order) VALUES ($1, $2, $3, $4)',
-          [column_id, optionValue, optionLabel, i]
-        );
+        await client.query('INSERT INTO column_options (column_id, option_value, option_label, option_order) VALUES ($1, $2, $3, $4)', [column_id, optionValue, optionLabel, i]);
       }
     }
-    
-    await client.query('COMMIT');
+    if (localTx) await client.query('COMMIT');
     return true;
   } catch (error) {
-    await client.query('ROLLBACK');
+    if (localTx) await client.query('ROLLBACK');
     throw error;
-  } finally {
-    client.release();
-  }
+  } finally { release(); }
 };
 
 // Obtener opciones de una columna
-exports.getColumnOptions = async (column_id) => {
-  const result = await pool.query(
-    'SELECT * FROM column_options WHERE column_id = $1 AND is_active = true ORDER BY option_order',
-    [column_id]
-  );
-  return result.rows;
+exports.getColumnOptions = async (column_id, schemaName='public', existingClient=null) => {
+  const { client, release } = await getClient({ schemaName, existingClient });
+  try {
+    const result = await client.query('SELECT * FROM column_options WHERE column_id = $1 AND is_active = true ORDER BY option_order', [column_id]);
+    return result.rows;
+  } finally { release(); }
 };
 
 // Actualizar una opción específica
-exports.updateColumnOption = async (option_id, option_data) => {
+exports.updateColumnOption = async (option_id, option_data, schemaName='public', existingClient=null) => {
+  const { client, release } = await getClient({ schemaName, existingClient });
   // Construir dinámicamente el query y los valores
   const fields = [];
   const values = [];
@@ -68,41 +60,44 @@ exports.updateColumnOption = async (option_id, option_data) => {
   }
   values.push(option_id);
   const query = `UPDATE column_options SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`;
-  const result = await pool.query(query, values);
-  return result.rows[0];
+  try {
+    const result = await client.query(query, values);
+    return result.rows[0];
+  } finally { release(); }
 };
 
 // Eliminar una opción específica (soft delete)
-exports.deleteColumnOption = async (option_id) => {
-  const result = await pool.query(
-    'UPDATE column_options SET is_active = false WHERE id = $1 RETURNING *',
-    [option_id]
-  );
-  return result.rows[0];
+exports.deleteColumnOption = async (option_id, schemaName='public', existingClient=null) => {
+  const { client, release } = await getClient({ schemaName, existingClient });
+  try {
+    const result = await client.query('UPDATE column_options SET is_active = false WHERE id = $1 RETURNING *', [option_id]);
+    return result.rows[0];
+  } finally { release(); }
 };
 
 // Eliminar todas las opciones de una columna
-exports.deleteColumnOptions = async (column_id) => {
-  await pool.query('DELETE FROM column_options WHERE column_id = $1', [column_id]);
-  return true;
+exports.deleteColumnOptions = async (column_id, schemaName='public', existingClient=null) => {
+  const { client, release } = await getClient({ schemaName, existingClient });
+  try {
+    await client.query('DELETE FROM column_options WHERE column_id = $1', [column_id]);
+    return true;
+  } finally { release(); }
 };
 
 // Verificar si una columna existe
-exports.columnExists = async (column_id) => {
-  const result = await pool.query(
-    'SELECT 1 FROM columns WHERE id = $1',
-    [column_id]
-  );
-  return result.rows.length > 0;
+exports.columnExists = async (column_id, schemaName='public', existingClient=null) => {
+  const { client, release } = await getClient({ schemaName, existingClient });
+  try {
+    const result = await client.query('SELECT 1 FROM columns WHERE id = $1', [column_id]);
+    return result.rows.length > 0;
+  } finally { release(); }
 };
 
 // Obtener opciones disponibles para una columna (personalizadas o de tabla foránea)
-exports.getAvailableOptions = async (column_id) => {
+exports.getAvailableOptions = async (column_id, schemaName='public', existingClient=null) => {
+  const { client, release } = await getClient({ schemaName, existingClient });
   // Primero obtener información de la columna
-  const columnResult = await pool.query(
-    'SELECT * FROM columns WHERE id = $1',
-    [column_id]
-  );
+  const columnResult = await client.query('SELECT * FROM columns WHERE id = $1', [column_id]);
   
   if (columnResult.rows.length === 0) {
     throw new Error('Columna no encontrada');
@@ -127,10 +122,7 @@ exports.getAvailableOptions = async (column_id) => {
   if (column.foreign_table_id && column.foreign_column_name) {
     console.log(`Getting options from foreign table ${column.foreign_table_id}, column ${column.foreign_column_name}`);
     
-    const tableResult = await pool.query(
-      'SELECT id, record_data FROM records WHERE table_id = $1 AND record_data ? $2 ORDER BY id',
-      [column.foreign_table_id, column.foreign_column_name]
-    );
+  const tableResult = await client.query('SELECT id, record_data FROM records WHERE table_id = $1 AND record_data ? $2 ORDER BY id', [column.foreign_table_id, column.foreign_column_name]);
     
     const options = tableResult.rows
       .filter(record => {
@@ -148,7 +140,7 @@ exports.getAvailableOptions = async (column_id) => {
   }
   
   // Si no es foreign key, verificar si tiene opciones personalizadas
-  const customOptions = await this.getColumnOptions(column_id);
+  const customOptions = await this.getColumnOptions(column_id, schemaName, client);
   
   // Si tiene opciones personalizadas, retornarlas
   if (customOptions.length > 0) {
@@ -159,5 +151,6 @@ exports.getAvailableOptions = async (column_id) => {
     }));
   }
   
+  release();
   return [];
 };

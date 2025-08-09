@@ -9,7 +9,7 @@ class RecordSubscriptionsController {
         ...req.body,
         user_id: req.user.id,
         created_by: req.user.id
-      });
+      }, req.companySchema);
       
       res.status(201).json({
         success: true,
@@ -28,7 +28,7 @@ class RecordSubscriptionsController {
   // Obtener suscripciones de un usuario
   async getUserSubscriptions(req, res) {
     try {
-      const subscriptions = await recordSubscriptionsService.getUserSubscriptions(req.user.id);
+      const subscriptions = await recordSubscriptionsService.getUserSubscriptions(req.user.id, req.companySchema);
       res.json({
         success: true,
         data: subscriptions
@@ -50,7 +50,7 @@ class RecordSubscriptionsController {
         req.user.id, 
         tableId, 
         recordId === 'null' ? null : recordId
-      );
+      , req.companySchema);
       
       res.json({
         success: true,
@@ -93,7 +93,7 @@ class RecordSubscriptionsController {
   // Obtener estadísticas de suscripciones
   async getStats(req, res) {
     try {
-      const stats = await recordSubscriptionsService.getStats();
+      const stats = await recordSubscriptionsService.getStats(req.companySchema);
       res.json({
         success: true,
         data: stats
@@ -113,7 +113,7 @@ class RecordSubscriptionsController {
       const subscription = await recordSubscriptionsService.updateSubscription(
         req.params.id,
         req.body
-      );
+      , req.companySchema);
       
       res.json({
         success: true,
@@ -132,7 +132,7 @@ class RecordSubscriptionsController {
   // Eliminar suscripción
   async deleteSubscription(req, res) {
     try {
-      await recordSubscriptionsService.deleteSubscription(req.params.id);
+      await recordSubscriptionsService.deleteSubscription(req.params.id, req.companySchema);
       res.json({
         success: true,
         message: 'Suscripción eliminada exitosamente'

@@ -10,7 +10,9 @@ const rolesRoutes = require('./routes/roles');
 const permissionsRoutes = require('./routes/permissions');
 const notificationsRoutes = require('./routes/notifications');
 const authRoutes = require('./routes/auth');
+const companiesRoutes = require('./routes/companies');
 const authMiddleware = require('./middleware/authMiddleware');
+const { companyMiddleware } = require('./middleware/companyMiddleware');
 const viewsRoutes = require('./routes/views');
 const filesRoutes = require('./routes/files');
 const scheduledNotificationsRoutes = require('./routes/scheduledNotifications');
@@ -49,28 +51,31 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
 
+// Rutas públicas (no requieren autenticación)
 app.use('/api/auth', authRoutes); 
+app.use('/api/companies', companiesRoutes);
 
+// Middleware de autenticación para rutas protegidas
 app.use(authMiddleware);
 
-app.use('/api/modules', modulesRoutes);
-app.use('/api/tables', tablesRoutes);
-app.use('/api/columns', columnsRoutes);
-app.use('/api/records', recordsRoutes);
-app.use('/api/users', usersRoutes);
-app.use('/api/roles', rolesRoutes);
-app.use('/api/permissions', permissionsRoutes);
-app.use('/api/notifications', notificationsRoutes);
-app.use('/api/views', viewsRoutes);
-app.use('/api/files', filesRoutes);
-app.use('/api/scheduled-notifications', scheduledNotificationsRoutes);
-app.use('/api/record-assigned-users', recordAssignedUsersRoutes);
-app.use('/api/record-comments', recordCommentsRoutes);
-app.use('/api/table-collaborators', tableCollaboratorsRoutes);
-app.use('/api', columnOptionsRoutes);
-app.use('/api/view-sorts', viewSortRoutes);
-
-app.use('/api/audit-log', auditLogRoutes);
+// Rutas que requieren empresa activa (multiempresa)
+app.use('/api/modules', companyMiddleware, modulesRoutes);
+app.use('/api/tables', companyMiddleware, tablesRoutes);
+app.use('/api/columns', companyMiddleware, columnsRoutes);
+app.use('/api/records', companyMiddleware, recordsRoutes);
+app.use('/api/users', companyMiddleware, usersRoutes);
+app.use('/api/roles', companyMiddleware, rolesRoutes);
+app.use('/api/permissions', companyMiddleware, permissionsRoutes);
+app.use('/api/notifications', companyMiddleware, notificationsRoutes);
+app.use('/api/views', companyMiddleware, viewsRoutes);
+app.use('/api/files', companyMiddleware, filesRoutes);
+app.use('/api/scheduled-notifications', companyMiddleware, scheduledNotificationsRoutes);
+app.use('/api/record-assigned-users', companyMiddleware, recordAssignedUsersRoutes);
+app.use('/api/record-comments', companyMiddleware, recordCommentsRoutes);
+app.use('/api/table-collaborators', companyMiddleware, tableCollaboratorsRoutes);
+app.use('/api', companyMiddleware, columnOptionsRoutes);
+app.use('/api/view-sorts', companyMiddleware, viewSortRoutes);
+app.use('/api/audit-log', companyMiddleware, auditLogRoutes);
 
 // Iniciar el scheduler de notificaciones programadas
 notificationScheduler.start();

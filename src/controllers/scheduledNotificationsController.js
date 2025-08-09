@@ -12,7 +12,7 @@ class ScheduledNotificationsController {
       const notification = await scheduledNotificationsService.createScheduledNotification({
         ...req.body,
         created_by: req.user.id
-      });
+      }, req.companySchema);
       
       res.status(201).json({
         success: true,
@@ -31,7 +31,7 @@ class ScheduledNotificationsController {
   // Obtener notificaciones programadas de un usuario
   async getByUser(req, res) {
     try {
-      const notifications = await scheduledNotificationsService.getUserScheduledNotifications(req.user.id);
+      const notifications = await scheduledNotificationsService.getUserScheduledNotifications(req.user.id, req.companySchema);
       res.json({
         success: true,
         data: notifications
@@ -49,7 +49,7 @@ class ScheduledNotificationsController {
   async getByTable(req, res) {
     try {
       const { tableId } = req.params;
-      const notifications = await scheduledNotificationsService.getNotificationsByTable(tableId);
+      const notifications = await scheduledNotificationsService.getNotificationsByTable(tableId, req.companySchema);
       res.json({
         success: true,
         data: notifications
@@ -67,7 +67,7 @@ class ScheduledNotificationsController {
   async getByRecord(req, res) {
     try {
       const { tableId, recordId } = req.params;
-      const notifications = await scheduledNotificationsService.getNotificationsByRecord(tableId, recordId);
+      const notifications = await scheduledNotificationsService.getNotificationsByRecord(tableId, recordId, req.companySchema);
       res.json({
         success: true,
         data: notifications
@@ -84,7 +84,7 @@ class ScheduledNotificationsController {
   async deactivate(req, res) {
     try {
       const { id } = req.params;
-      await scheduledNotificationsService.deactivateScheduledNotification(id);
+      await scheduledNotificationsService.deactivateScheduledNotification(id, req.companySchema);
       res.json({
         success: true,
         message: 'Notificación desactivada exitosamente'
@@ -101,7 +101,7 @@ class ScheduledNotificationsController {
   // Desactivar todas las notificaciones (scheduled y generales)
   async deactivateAll(req, res) {
     try {
-      await scheduledNotificationsService.deactivateAllNotifications();
+      await scheduledNotificationsService.deactivateAllNotifications(req.companySchema);
       res.json({
         success: true,
         message: 'Todas las notificaciones han sido desactivadas'
@@ -117,7 +117,7 @@ class ScheduledNotificationsController {
   // Obtener estadísticas de notificaciones
   async getStats(req, res) {
     try {
-      const stats = await scheduledNotificationsService.getStats();
+      const stats = await scheduledNotificationsService.getStats(req.companySchema);
       res.json({
         success: true,
         data: stats
@@ -135,7 +135,7 @@ class ScheduledNotificationsController {
   async getDateColumns(req, res) {
     try {
       const { tableId } = req.params;
-      const columns = await scheduledNotificationsService.getDateColumns(tableId);
+      const columns = await scheduledNotificationsService.getDateColumns(tableId, req.companySchema);
       res.json({
         success: true,
         data: columns
@@ -153,7 +153,7 @@ class ScheduledNotificationsController {
   async update(req, res) {
     try {
       const { id } = req.params;
-      const notification = await scheduledNotificationsService.updateScheduledNotification(id, req.body);
+      const notification = await scheduledNotificationsService.updateScheduledNotification(id, req.body, req.companySchema);
       
       res.json({
         success: true,
@@ -173,7 +173,7 @@ class ScheduledNotificationsController {
   async delete(req, res) {
     try {
       const { id } = req.params;
-      await scheduledNotificationsService.deleteScheduledNotification(id);
+      await scheduledNotificationsService.deleteScheduledNotification(id, req.companySchema);
       
       res.json({
         success: true,
@@ -195,7 +195,7 @@ class ScheduledNotificationsController {
         ...req.body,
         user_id: req.user.id,
         created_by: req.user.id
-      });
+      }, req.companySchema);
       
       res.status(201).json({
         success: true,
@@ -214,7 +214,7 @@ class ScheduledNotificationsController {
   // Obtener suscripciones del usuario
   async getUserSubscriptions(req, res) {
     try {
-      const subscriptions = await scheduledNotificationsService.getUserSubscriptions(req.user.id);
+      const subscriptions = await scheduledNotificationsService.getUserSubscriptions(req.user.id, req.companySchema);
       res.json({
         success: true,
         data: subscriptions
@@ -236,7 +236,7 @@ class ScheduledNotificationsController {
         req.user.id, 
         tableId, 
         recordId
-      );
+      , req.companySchema);
       res.json({
         success: true,
         data: { isSubscribed }
@@ -253,7 +253,7 @@ class ScheduledNotificationsController {
   // Obtener estadísticas de suscripciones
   async getSubscriptionStats(req, res) {
     try {
-      const stats = await scheduledNotificationsService.getSubscriptionStats();
+      const stats = await scheduledNotificationsService.getSubscriptionStats(req.companySchema);
       res.json({
         success: true,
         data: stats
@@ -271,7 +271,7 @@ class ScheduledNotificationsController {
   async deleteSubscription(req, res) {
     try {
       const { id } = req.params;
-      await scheduledNotificationsService.deleteSubscription(id);
+      await scheduledNotificationsService.deleteSubscription(id, req.companySchema);
       
       res.json({
         success: true,
@@ -290,7 +290,7 @@ class ScheduledNotificationsController {
   async getAllUserNotifications(req, res) {
     try {
       const { userId } = req.params;
-      const notifications = await scheduledNotificationsService.getAllUserNotifications(userId);
+      const notifications = await scheduledNotificationsService.getAllUserNotifications(userId, req.companySchema);
       res.json({
         success: true,
         data: notifications
@@ -308,7 +308,7 @@ class ScheduledNotificationsController {
   async getUserGeneralNotifications(req, res) {
     try {
       const { userId } = req.params;
-      const notifications = await scheduledNotificationsService.getUserGeneralNotifications(userId);
+      const notifications = await scheduledNotificationsService.getUserGeneralNotifications(userId, req.companySchema);
       res.json({
         success: true,
         data: notifications
@@ -326,7 +326,7 @@ class ScheduledNotificationsController {
   async markGeneralNotificationAsRead(req, res) {
     try {
       const { notificationId } = req.params;
-      const notification = await scheduledNotificationsService.markGeneralNotificationAsRead(notificationId);
+      const notification = await scheduledNotificationsService.markGeneralNotificationAsRead(notificationId, req.companySchema);
       res.json({
         success: true,
         data: notification,
@@ -345,7 +345,7 @@ class ScheduledNotificationsController {
   async markScheduledNotificationAsRead(req, res) {
     try {
       const { notificationId } = req.params;
-      const notification = await scheduledNotificationsService.markScheduledNotificationAsRead(notificationId);
+      const notification = await scheduledNotificationsService.markScheduledNotificationAsRead(notificationId, req.companySchema);
       res.json({
         success: true,
         data: notification,

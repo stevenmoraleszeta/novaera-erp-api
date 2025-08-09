@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { getClient } = require('../utils/dbHelper');
 const filesService = require('./filesService');
 const scheduledNotificationsService = require('./scheduledNotificationsService');
 
@@ -11,11 +12,20 @@ class RecordsService {
     const sanitizedUserId = String(userId).replace(/'/g, "");  
     await client.query(`SET session "audit.user_id" = '${sanitizedUserId}'`);
   }
+  
+  /**
+   * Obtiene un cliente configurando el search_path al schema especificado.
+   * Reutiliza client existente si ya viene en options (futuro) o crea nuevo.
+   */
+  async getClientWithSchema(schemaName, existingClient = null) {
+    const { client, release } = await getClient({ schemaName, existingClient });
+    client.__releaseWrapper = release;
+    return client;
+  }
 
-
-  // Crear registro
-  async createRecord({ table_id, record_data, position_num, createdBy, ipAddress, userAgent }) {
-    const client = await pool.connect();  
+  // Crear registro (multi-schema)
+  async createRecord({ table_id, record_data, position_num, createdBy, ipAddress, userAgent }, schemaName = 'public', existingClient = null) {
+    const client = await this.getClientWithSchema(schemaName, existingClient);
     try {
       await this.setAuditUser(client, createdBy);
 
@@ -34,67 +44,65 @@ class RecordsService {
 
     } catch (error) {
       throw new Error(`Error al crear registro: ${error.message}`);
-    } finally {
-      client.release(); 
-    }
+  } finally { client.__releaseWrapper && client.__releaseWrapper(); }
   }
 
 
 
 
   // Obtener el último registro insertado
-  async getLastInsertedRecordId(tableId) {
+  async getLastInsertedRecordId(tableId, schemaName = 'public', existingClient = null) {
+    const client = await this.getClientWithSchema(schemaName, existingClient);
     try {
-      const result = await pool.query(
+      const result = await client.query(
         'SELECT id FROM records WHERE table_id = $1 ORDER BY created_at DESC LIMIT 1',
         [tableId]
       );
       return result.rows[0]?.id;
     } catch (error) {
       throw new Error(`Error al obtener ID del registro: ${error.message}`);
-    }
+    } finally { client.__releaseWrapper && client.__releaseWrapper(); }
   }
 
-  async getRecordsByTable(table_id) {
+  async getRecordsByTable(table_id, schemaName = 'public', existingClient = null) {
+    const client = await this.getClientWithSchema(schemaName, existingClient);
     try {
-      const result = await pool.query(
+      const result = await client.query(
         'SELECT * FROM obtener_registros_por_tabla($1)',
         [table_id]
       );
-      
-      const expandedRecords = await this.expandFileReferences(result.rows);
+      const expandedRecords = await this.expandFileReferences(result.rows, schemaName);
       return expandedRecords;
     } catch (error) {
       throw new Error(`Error al obtener registros: ${error.message}`);
-    }
+    } finally { client.__releaseWrapper && client.__releaseWrapper(); }
   }
 
   // Obtener registro por ID
-  async getRecordById(record_id) {
+  async getRecordById(record_id, schemaName = 'public', existingClient = null) {
+    const client = await this.getClientWithSchema(schemaName, existingClient);
     try {
-      const result = await pool.query(
+      const result = await client.query(
         'SELECT * FROM obtener_registro_por_id($1)',
         [record_id]
       );
-      
       if (result.rows.length === 0) {
         throw new Error('Registro no encontrado');
       }
-      
-      const expandedRecords = await this.expandFileReferences(result.rows);
+      const expandedRecords = await this.expandFileReferences(result.rows, schemaName);
       return expandedRecords[0];
     } catch (error) {
       throw new Error(`Error al obtener registro: ${error.message}`);
-    }
+    } finally { client.__releaseWrapper && client.__releaseWrapper(); }
   }
 
   // Actualizar registro
-  async updateRecord({ record_id, recordData, position_num, updatedBy, ipAddress, userAgent }) {
-    const client = await pool.connect();
+  async updateRecord({ record_id, recordData, position_num, updatedBy, ipAddress, userAgent }, schemaName = 'public', existingClient = null) {
+    const client = await this.getClientWithSchema(schemaName, existingClient);
     try {
       await this.setAuditUser(client, updatedBy);
 
-      const oldRecord = await this.getRecordById(record_id);
+      const oldRecord = await this.getRecordById(record_id, schemaName);
 
       const result = await client.query(
         'SELECT actualizar_registro_dinamico($1, $2, $3) AS message',
@@ -104,12 +112,12 @@ class RecordsService {
       // Notificar a los usuarios asignados si existen
       try {
         const assignedUsersService = require('./recordAssignedUsersService');
-        const assignedUsers = await assignedUsersService.getAssignedUsersByRecord(record_id);
+  const assignedUsers = await assignedUsersService.getAssignedUsersByRecord(record_id, schemaName);
         if (assignedUsers && assignedUsers.length > 0) {
           // Obtener el module_id de la tabla
           let moduleId = null;
           try {
-            const tableRes = await pool.query('SELECT module_id FROM tables WHERE id = $1', [oldRecord.table_id]);
+            const tableRes = await client.query('SELECT module_id FROM tables WHERE id = $1', [oldRecord.table_id]);
             moduleId = tableRes.rows[0]?.module_id;
           } catch (modErr) {
             console.error('No se pudo obtener el module_id de la tabla:', modErr);
@@ -119,7 +127,7 @@ class RecordsService {
             let moduleName = '';
             try {
               if (moduleId) {
-                const modRes = await pool.query('SELECT name FROM modules WHERE id = $1', [moduleId]);
+                const modRes = await client.query('SELECT name FROM modules WHERE id = $1', [moduleId]);
                 moduleName = modRes.rows[0]?.name || '';
               }
             } catch (modNameErr) {
@@ -146,26 +154,25 @@ class RecordsService {
         newData: recordData,
         changedBy: updatedBy,
         ipAddress,
-        userAgent
+        userAgent,
+        schemaName
       });
 
       return result.rows[0];
 
     } catch (error) {
       throw new Error(`Error al actualizar registro: ${error.message}`);
-    } finally {
-      client.release();
-    }
+  } finally { client.__releaseWrapper && client.__releaseWrapper(); }
   }
 
 
   // Eliminar registro
-  async deleteRecord(record_id, deletedBy, ipAddress, userAgent) {
-    const client = await pool.connect();  
+  async deleteRecord(record_id, deletedBy, ipAddress, userAgent, schemaName = 'public', existingClient = null) {
+    const client = await this.getClientWithSchema(schemaName, existingClient);
     try {
       await this.setAuditUser(client, deletedBy);
 
-      const oldRecord = await this.getRecordById(record_id);
+      const oldRecord = await this.getRecordById(record_id, schemaName);
 
       const result = await client.query(
         'SELECT eliminar_registro_dinamico($1) AS message',
@@ -180,43 +187,42 @@ class RecordsService {
         newData: null,
         changedBy: deletedBy,
         ipAddress,
-        userAgent
+        userAgent,
+        schemaName
       });
 
       return result.rows[0];
 
     } catch (error) {
       throw new Error(`Error al eliminar registro: ${error.message}`);
-    } finally {
-      client.release(); 
-    }
+  } finally { client.__releaseWrapper && client.__releaseWrapper(); }
   }
 
 
   // Buscar registros por valor
-  async searchRecordsByValue(table_id, value) {
+  async searchRecordsByValue(table_id, value, schemaName = 'public', existingClient = null) {
+    const client = await this.getClientWithSchema(schemaName, existingClient);
     try {
-      const result = await pool.query(
+      const result = await client.query(
         'SELECT * FROM buscar_registros_por_valor($1, $2)',
         [table_id, value]
       );
-      
-      const expandedRecords = await this.expandFileReferences(result.rows);
+      const expandedRecords = await this.expandFileReferences(result.rows, schemaName);
       return expandedRecords;
     } catch (error) {
       throw new Error(`Error al buscar registros: ${error.message}`);
-    }
+    } finally { client.__releaseWrapper && client.__releaseWrapper(); }
   }
 
   // Expandir referencias de archivos
-  async expandFileReferences(records) {
+  async expandFileReferences(records, schemaName = 'public') {
     const expandedRecords = [];
     
     for (const record of records) {
       const expandedRecord = { ...record };
       
       if (record.record_data) {
-        expandedRecord.record_data = await this.expandFiles(record.record_data);
+        expandedRecord.record_data = await this.expandFiles(record.record_data, schemaName);
       }
       
       expandedRecords.push(expandedRecord);
@@ -226,14 +232,14 @@ class RecordsService {
   }
 
   // Expandir archivos en el JSON
-  async expandFiles(recordData) {
+  async expandFiles(recordData, schemaName = 'public') {
     const expanded = { ...recordData };
     
     for (const [key, value] of Object.entries(expanded)) {
       if (value && typeof value === 'object') {
         // Archivo individual
         if (value.file_id) {
-          const fileInfo = await filesService.getFileInfo(value.file_id);
+          const fileInfo = await filesService.getFileInfo(value.file_id, schemaName);
           if (fileInfo) {
             expanded[key] = {
               ...value,
@@ -248,7 +254,7 @@ class RecordsService {
           const expandedArray = [];
           for (const item of value) {
             if (item && item.file_id) {
-              const fileInfo = await filesService.getFileInfo(item.file_id);
+              const fileInfo = await filesService.getFileInfo(item.file_id, schemaName);
               if (fileInfo) {
                 expandedArray.push({
                   ...item,

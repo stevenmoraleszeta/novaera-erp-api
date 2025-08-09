@@ -14,7 +14,7 @@ exports.createRecord = async (req, res) => {
       createdBy,
       ipAddress,
       userAgent
-    });
+    }, req.companySchema);
     res.status(201).json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -23,7 +23,7 @@ exports.createRecord = async (req, res) => {
 
 exports.getRecords = async (req, res) => {
   try {
-    const records = await recordsService.getRecords();
+    const records = await recordsService.getRecords(req.companySchema);
     res.json(records);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -33,7 +33,7 @@ exports.getRecords = async (req, res) => {
 exports.getRecordsByTable = async (req, res) => {
   try {
     const { table_id } = req.params;
-    const records = await recordsService.getRecordsByTable(table_id);
+    const records = await recordsService.getRecordsByTable(table_id, req.companySchema);
     res.json(records);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -43,7 +43,7 @@ exports.getRecordsByTable = async (req, res) => {
 exports.getRecordById = async (req, res) => {
   try {
     const { record_id } = req.params;
-    const record = await recordsService.getRecordById(record_id);
+    const record = await recordsService.getRecordById(record_id, req.companySchema);
     res.json(record);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -67,7 +67,7 @@ exports.updateRecord = async (req, res) => {
       updatedBy, 
       ipAddress, 
       userAgent 
-    });
+    }, req.companySchema);
     
     res.json(result);
   } catch (err) {
@@ -84,7 +84,7 @@ exports.deleteRecord = async (req, res) => {
     const ipAddress = req.ip || req.connection.remoteAddress;
     const userAgent = req.get('User-Agent');
     
-    const result = await recordsService.deleteRecord(record_id, deletedBy, ipAddress, userAgent);
+    const result = await recordsService.deleteRecord(record_id, deletedBy, ipAddress, userAgent, req.companySchema);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -95,7 +95,7 @@ exports.searchRecordsByValue = async (req, res) => {
   try {
     const { table_id } = req.params;
     const { value } = req.query;
-    const records = await recordsService.searchRecordsByValue(table_id, value);
+    const records = await recordsService.searchRecordsByValue(table_id, value, req.companySchema);
     res.json(records);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -105,7 +105,7 @@ exports.searchRecordsByValue = async (req, res) => {
 exports.countRecordsByTable = async (req, res) => {
   try {
     const { table_id } = req.params;
-    const count = await recordsService.countRecordsByTable(table_id);
+    const count = await recordsService.countRecordsByTable(table_id, req.companySchema);
     res.json({ count });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -116,7 +116,7 @@ exports.existsFieldInRecords = async (req, res) => {
   try {
     const { table_id } = req.params;
     const { field_name } = req.query;
-    const exists = await recordsService.existsFieldInRecords(table_id, field_name);
+    const exists = await recordsService.existsFieldInRecords(table_id, field_name, req.companySchema);
     res.json({ exists });
   } catch (err) {
     res.status(500).json({ error: err.message });

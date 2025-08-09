@@ -7,7 +7,7 @@ exports.getViewsByTable = async (req, res) => {
       return res.status(400).json({ error: 'Falta el parámetro table_id.' });
     }
 
-    const views = await viewService.getViewsByTable(table_id);
+    const views = await viewService.getViewsByTable(table_id, req.companySchema);
     res.json(views);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -23,7 +23,7 @@ exports.createView = async (req, res) => {
       sort_by,
       sort_direction,
       position_num
-    });
+    }, req.companySchema);
 
     res.status(201).json(result);
   } catch (err) {
@@ -43,7 +43,7 @@ exports.addColumnToView = async (req, res) => {
       filter_value,
       position_num,
       width_px
-    });
+    }, req.companySchema);
 
     res.status(201).json(result);
   } catch (err) {
@@ -58,7 +58,7 @@ exports.getColumnsByView = async (req, res) => {
       return res.status(400).json({ error: 'Falta el parámetro view_id.' });
     }
 
-    const columns = await viewService.getColumnsByView(view_id);
+    const columns = await viewService.getColumnsByView(view_id, req.companySchema);
     res.json(columns);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -68,7 +68,7 @@ exports.getColumnsByView = async (req, res) => {
 exports.deleteView = async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await viewService.deleteView(id);
+    const result = await viewService.deleteView(id, req.companySchema);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -80,7 +80,7 @@ exports.updateView = async (req, res) => {
   try {
     const { id } = req.params;
     const updatedData = req.body;
-    const result = await viewService.updateView({ id, ...updatedData });
+    const result = await viewService.updateView({ id, ...updatedData }, req.companySchema);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -92,7 +92,7 @@ exports.updateViewColumn = async (req, res) => {
     const { id } = req.params;
     const updatedData = req.body;
     console.log("clap data", updatedData)
-    const result = await viewService.updateViewColumn({ id, ...updatedData });
+    const result = await viewService.updateViewColumn({ id, ...updatedData }, req.companySchema);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -141,7 +141,7 @@ exports.deleteViewColumn = async (req, res) => {
   try {
     const { id } = req.params; // ← este es el id del view_column
 
-    const result = await viewService.deleteViewColumn(id);
+    const result = await viewService.deleteViewColumn(id, req.companySchema);
     res.json({ message: 'Columna eliminada de la vista correctamente.', result });
   } catch (err) {
     res.status(500).json({ error: err.message });

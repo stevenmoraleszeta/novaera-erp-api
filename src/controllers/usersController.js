@@ -2,7 +2,8 @@ const usersService = require('../services/usersService');
 
 exports.getUsers = async (req, res) => {
   try {
-    const users = await usersService.getUsers();
+    // Usar el schema de la empresa del middleware
+    const users = await usersService.getUsers(req.companySchema);
     res.json(users);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -12,7 +13,8 @@ exports.getUsers = async (req, res) => {
 exports.createUser = async (req, res) => {
   try {
     const userData = req.body;
-    const user = await usersService.createUser(userData);
+    // Usar el schema de la empresa del middleware
+    const user = await usersService.createUser(userData, req.companySchema);
     res.status(201).json(user);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -23,7 +25,7 @@ exports.updateUser = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, email } = req.body;
-    const result = await usersService.updateUser({ id, name, email });
+    const result = await usersService.updateUser({ id, name, email }, req.companySchema);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -34,7 +36,7 @@ exports.updatePassword = async (req, res) => {
   try {
     const { id } = req.params;
     const { password_hash } = req.body;
-    const result = await usersService.updatePassword({ id, password_hash });
+    const result = await usersService.updatePassword({ id, password_hash }, req.companySchema);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -45,7 +47,7 @@ exports.deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
     const { tipo } = req.query; // 'logica' o 'fisica'
-    const result = await usersService.deleteUser(id, tipo);
+    const result = await usersService.deleteUser(id, tipo, req.companySchema);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });

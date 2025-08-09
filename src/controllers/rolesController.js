@@ -2,7 +2,7 @@ const rolesService = require('../services/rolesService');
 
 exports.getRoles = async (req, res) => {
   try {
-    const roles = await rolesService.getRoles();
+    const roles = await rolesService.getRoles(req.companySchema);
     res.json(roles);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -12,7 +12,7 @@ exports.getRoles = async (req, res) => {
 exports.createRole = async (req, res) => {
   try {
     const { name, description } = req.body;
-    const result = await rolesService.createRole({ name, description });
+    const result = await rolesService.createRole({ name, description }, req.companySchema);
     res.status(201).json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -22,7 +22,7 @@ exports.createRole = async (req, res) => {
 exports.getRoleById = async (req, res) => {
   try {
     const { id } = req.params;
-    const role = await rolesService.getRoleById(id);
+    const role = await rolesService.getRoleById(id, req.companySchema);
     res.json(role);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -33,7 +33,7 @@ exports.updateRole = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, description } = req.body;
-    const updated = await rolesService.updateRole(id, { name, description });
+    const updated = await rolesService.updateRole(id, { name, description }, req.companySchema);
     res.json(updated);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -43,7 +43,7 @@ exports.updateRole = async (req, res) => {
 exports.deleteRole = async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await rolesService.deleteRole(id);
+    const result = await rolesService.deleteRole(id, req.companySchema);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -75,7 +75,7 @@ exports.removeRoleFromUser = async (req, res) => {
 exports.getRolesByUser = async (req, res) => {
   try {
     const { user_id } = req.params;
-    const roles = await rolesService.getRolesByUser(user_id);
+    const roles = await rolesService.getRolesByUser(user_id, req.companySchema);
     res.json(roles);
   } catch (err) {
     res.status(500).json({ error: err.message });

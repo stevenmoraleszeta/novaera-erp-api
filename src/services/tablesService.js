@@ -1,77 +1,76 @@
 const pool = require('../config/db');
+const { getClient } = require('../utils/dbHelper');
 const rolesService = require('./rolesService');
 
-exports.createTable = async ({ module_id, name, description, original_table_id, foreign_table_id, position_num}) => {
-
-  let result
-  let response
-
-  if(module_id == null){
-   result = await pool.query(
-    `INSERT INTO tables (name, description, original_table_id, foreign_table_id)
-     VALUES ($1, $2, $3, $4)
-     RETURNING *`,
-    [name, description, original_table_id, foreign_table_id]
-  );
-  response = result.rows[0];
-  } else {
-   result = await pool.query(
-    'SELECT crear_tabla_logica($1, $2, $3, $4, $5, $6) AS data',
-    [module_id, name, description, original_table_id, foreign_table_id, position_num]
-  );
-   response = result.rows[0].data;
-  }
-
-  if (response.error) {
-    throw new Error(response.error);
-  }
-
-  return response; // { id: 123, message: "Tabla creada correctamente" }
+exports.createTable = async ({ module_id, name, description, original_table_id, foreign_table_id, position_num}, schemaName = 'public', existingClient=null) => {
+  const { client, release } = await getClient({ schemaName, existingClient });
+  try {
+    let result;
+    let response;
+    if (module_id == null) {
+      result = await client.query(
+        'INSERT INTO tables (name, description, original_table_id, foreign_table_id) VALUES ($1, $2, $3, $4) RETURNING *',
+        [name, description, original_table_id, foreign_table_id]
+      );
+      response = result.rows[0];
+    } else {
+      result = await client.query(
+        'SELECT crear_tabla_logica($1, $2, $3, $4, $5, $6) AS data',
+        [module_id, name, description, original_table_id, foreign_table_id, position_num]
+      );
+      response = result.rows[0].data;
+    }
+    if (response.error) throw new Error(response.error);
+    return response;
+  } finally { release(); }
 };
 
-exports.getTablesByModule = async (module_id) => {
-  const result = await pool.query(
-    'SELECT * FROM obtener_tablas_por_modulo($1)',
-    [module_id]
-  );
-  return result.rows;
+exports.getTablesByModule = async (module_id, schemaName = 'public', existingClient=null) => {
+  const { client, release } = await getClient({ schemaName, existingClient });
+  try {
+    const result = await client.query('SELECT * FROM obtener_tablas_por_modulo($1)', [module_id]);
+    return result.rows;
+  } finally { release(); }
 };
 
-exports.getTableById = async (table_id) => {
-  const result = await pool.query(
-    'SELECT * FROM obtener_tabla_por_id($1)',
-    [table_id]
-  );
-  return result.rows[0];
+exports.getTableById = async (table_id, schemaName = 'public', existingClient=null) => {
+  const { client, release } = await getClient({ schemaName, existingClient });
+  try {
+    const result = await client.query('SELECT * FROM obtener_tabla_por_id($1)', [table_id]);
+    return result.rows[0];
+  } finally { release(); }
 };
 
-exports.updateTable = async ({ table_id, name, description, original_table_id, foreign_table_id, position_num }) => {
-  const result = await pool.query(
-    'SELECT actualizar_tabla_logica($1, $2, $3, $4, $5, $6) AS message',
-    [table_id, name, description, original_table_id, foreign_table_id, position_num]
-  );
-  return result.rows[0];
+exports.updateTable = async ({ table_id, name, description, original_table_id, foreign_table_id, position_num }, schemaName = 'public', existingClient=null) => {
+  const { client, release } = await getClient({ schemaName, existingClient });
+  try {
+    const result = await client.query('SELECT actualizar_tabla_logica($1, $2, $3, $4, $5, $6) AS message', [table_id, name, description, original_table_id, foreign_table_id, position_num]);
+    return result.rows[0];
+  } finally { release(); }
 };
 
-exports.deleteTable = async (table_id) => {
-  const result = await pool.query(
-    'SELECT eliminar_tabla_logica($1) AS message',
-    [table_id]
-  );
-  return result.rows[0];
+exports.deleteTable = async (table_id, schemaName = 'public', existingClient=null) => {
+  const { client, release } = await getClient({ schemaName, existingClient });
+  try {
+    const result = await client.query('SELECT eliminar_tabla_logica($1) AS message', [table_id]);
+    return result.rows[0];
+  } finally { release(); }
 };
 
-exports.existsTableNameInModule = async (module_id, name) => {
-  const result = await pool.query(
-    'SELECT validar_nombre_tabla_existente($1, $2) AS exists',
-    [module_id, name]
-  );
-  return result.rows[0].exists;
+exports.existsTableNameInModule = async (module_id, name, schemaName = 'public', existingClient=null) => {
+  const { client, release } = await getClient({ schemaName, existingClient });
+  try {
+    const result = await client.query('SELECT validar_nombre_tabla_existente($1, $2) AS exists', [module_id, name]);
+    return result.rows[0].exists;
+  } finally { release(); }
 };
 
-exports.getTables = async () => {
-  const result = await pool.query('SELECT id, name, description, module_id, created_at, original_table_id, foreign_table_id FROM tables ORDER BY name ASC');
-  return result.rows;
+exports.getTables = async (schemaName = 'public', existingClient=null) => {
+  const { client, release } = await getClient({ schemaName, existingClient });
+  try {
+    const result = await client.query('SELECT id, name, description, module_id, created_at, original_table_id, foreign_table_id FROM tables ORDER BY name ASC');
+    return result.rows;
+  } finally { release(); }
 };
 
 /**
@@ -81,12 +80,14 @@ exports.getTables = async () => {
  * @param {string} displayColumn - Nombre de la columna que se mostrará en el selectbox.
  * @returns {Promise<{status: 'found'|'created', joinTable: object}>}
  */
-exports.getOrCreateJoinTable = async (tableA_id, tableB_id, displayColumn) => {
+exports.getOrCreateJoinTable = async (tableA_id, tableB_id, displayColumn, schemaName = 'public', existingClient=null) => {
   console.log('getOrCreateJoinTable called with:', {
     tableA_id,
     tableB_id, 
     displayColumn
   });
+  const { client, release } = await getClient({ schemaName, existingClient });
+  try {
   
   // Si no se proporciona displayColumn, buscar en la columna original que generó esta relación
   let actualDisplayColumn = displayColumn;
@@ -94,7 +95,7 @@ exports.getOrCreateJoinTable = async (tableA_id, tableB_id, displayColumn) => {
     console.log('No displayColumn provided, searching for original foreign key column...');
     
     // Buscar la columna de tipo "foreign" que referencia estas tablas
-    const originalColumnResult = await pool.query(`
+  const originalColumnResult = await client.query(`
       SELECT foreign_column_name 
       FROM columns 
       WHERE data_type = 'foreign' 
@@ -117,7 +118,7 @@ exports.getOrCreateJoinTable = async (tableA_id, tableB_id, displayColumn) => {
   console.log(`Using displayColumn: "${actualDisplayColumn}"`);
   
   // Buscar si ya existe una tabla intermedia (en cualquier orden)
-  const result = await pool.query(
+  const result = await client.query(
     `SELECT * FROM tables 
      WHERE (original_table_id = $1 AND foreign_table_id = $2)
         OR (original_table_id = $2 AND foreign_table_id = $1)`,
@@ -128,7 +129,7 @@ exports.getOrCreateJoinTable = async (tableA_id, tableB_id, displayColumn) => {
 
     // --- NUEVO: Crear columnas lógicas en la tabla intermedia si no existen ---
     async function checkColumnExists(tableId, columnName) {
-      const res = await pool.query(
+      const res = await client.query(
         `SELECT 1 FROM columns WHERE table_id = $1 AND name = $2`,
         [tableId, columnName]
       );
@@ -136,7 +137,7 @@ exports.getOrCreateJoinTable = async (tableA_id, tableB_id, displayColumn) => {
     }
     // original_record_id -> apunta a tableA (siempre usa 'id' como referencia)
     if (!(await checkColumnExists(joinTable.id, 'original_record_id'))) {
-      await pool.query(
+  await client.query(
         `INSERT INTO columns (table_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name)
          VALUES ($1, $2, 'select', true, true, $3, $4)`,
         [joinTable.id, 'original_record_id', tableA_id, 'id']
@@ -145,14 +146,14 @@ exports.getOrCreateJoinTable = async (tableA_id, tableB_id, displayColumn) => {
     // Columna para la tabla foránea -> usa la columna especificada por el usuario
     if (!(await checkColumnExists(joinTable.id, 'foreign_record_id'))) {
       console.log(`Creating foreign column: foreign_record_id referencing table ${tableB_id}, column ${actualDisplayColumn}`);
-      await pool.query(
+  await client.query(
         `INSERT INTO columns (table_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name)
          VALUES ($1, $2, 'select', true, true, $3, $4)`,
         [joinTable.id, 'foreign_record_id', tableB_id, actualDisplayColumn]
       );
     } else {
       // Si la columna ya existe, verificar y actualizar foreign_column_name si es necesario
-      const existingColumn = await pool.query(
+  const existingColumn = await client.query(
         `SELECT foreign_column_name FROM columns WHERE table_id = $1 AND name = $2`,
         [joinTable.id, 'foreign_record_id']
       );
@@ -162,7 +163,7 @@ exports.getOrCreateJoinTable = async (tableA_id, tableB_id, displayColumn) => {
         
         if (currentForeignColumn !== actualDisplayColumn) {
           console.log(`Updating foreign_column_name from '${currentForeignColumn}' to '${actualDisplayColumn}' for existing column`);
-          await pool.query(
+          await client.query(
             `UPDATE columns SET foreign_column_name = $1 WHERE table_id = $2 AND name = $3`,
             [actualDisplayColumn, joinTable.id, 'foreign_record_id']
           );
@@ -173,7 +174,7 @@ exports.getOrCreateJoinTable = async (tableA_id, tableB_id, displayColumn) => {
   }
 
   // Obtener los nombres de las tablas
-  const tableNamesRes = await pool.query(
+  const tableNamesRes = await client.query(
     'SELECT id, name FROM tables WHERE id = $1 OR id = $2',
     [tableA_id, tableB_id]
   );
@@ -201,7 +202,7 @@ exports.getOrCreateJoinTable = async (tableA_id, tableB_id, displayColumn) => {
   const physicalTableName = `${normA.replace(/\s+/g, '_')}_${normB.replace(/\s+/g, '_')}_join`;
 
   // Crea la tabla lógica en tu sistema
-  const insert = await pool.query(
+  const insert = await client.query(
     `INSERT INTO tables (name, description, original_table_id, foreign_table_id)
      VALUES ($1, $2, $3, $4)
      RETURNING *`,
@@ -212,7 +213,7 @@ exports.getOrCreateJoinTable = async (tableA_id, tableB_id, displayColumn) => {
   
 
   async function checkColumnExists(tableId, columnName) {
-    const res = await pool.query(
+  const res = await client.query(
       `SELECT 1 FROM columns WHERE table_id = $1 AND name = $2`,
       [tableId, columnName]
     );
@@ -220,7 +221,7 @@ exports.getOrCreateJoinTable = async (tableA_id, tableB_id, displayColumn) => {
   }
   // original_record_id -> apunta a tableA (siempre usa 'id' como referencia)
   if (!(await checkColumnExists(joinTable.id, 'original_record_id'))) {
-    await pool.query(
+  await client.query(
       `INSERT INTO columns (table_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name)
        VALUES ($1, $2, 'select', true, true, $3, $4)`,
       [joinTable.id, 'original_record_id', tableA_id, 'id']
@@ -229,14 +230,14 @@ exports.getOrCreateJoinTable = async (tableA_id, tableB_id, displayColumn) => {
   // Columna para la tabla foránea -> usa la columna especificada por el usuario
   if (!(await checkColumnExists(joinTable.id, 'foreign_record_id'))) {
     console.log(`Creating foreign column for new table: foreign_record_id referencing table ${tableB_id}, column ${actualDisplayColumn}`);
-    await pool.query(
+  await client.query(
       `INSERT INTO columns (table_id, name, data_type, is_required, is_foreign_key, foreign_table_id, foreign_column_name)
        VALUES ($1, $2, 'select', true, true, $3, $4)`,
       [joinTable.id, 'foreign_record_id', tableB_id, actualDisplayColumn]
     );
   } else {
     // Si la columna ya existe, verificar y actualizar foreign_column_name si es necesario
-    const existingColumn = await pool.query(
+  const existingColumn = await client.query(
       `SELECT foreign_column_name FROM columns WHERE table_id = $1 AND name = $2`,
       [joinTable.id, 'foreign_record_id']
     );
@@ -246,7 +247,7 @@ exports.getOrCreateJoinTable = async (tableA_id, tableB_id, displayColumn) => {
       
       if (currentForeignColumn !== actualDisplayColumn) {
         console.log(`Updating foreign_column_name from '${currentForeignColumn}' to '${actualDisplayColumn}' for new table column`);
-        await pool.query(
+  await client.query(
           `UPDATE columns SET foreign_column_name = $1 WHERE table_id = $2 AND name = $3`,
           [actualDisplayColumn, joinTable.id, 'foreign_record_id']
         );
@@ -256,16 +257,18 @@ exports.getOrCreateJoinTable = async (tableA_id, tableB_id, displayColumn) => {
 
   // Asignar permisos de lectura a todos los roles existentes
   try {
-    const allRoles = await rolesService.getRoles();
+  const allRoles = await rolesService.getRoles(schemaName, client);
     for (const role of allRoles) {
       // Asignar solo permisos de lectura (can_read = true, los demás en false)
-      await rolesService.setRolePermissions(
+    await rolesService.setRolePermissions(
         role.id, 
         joinTable.id, 
         false, // can_create
         true,  // can_read
         false, // can_update
-        false  // can_delete
+        false,  // can_delete
+        schemaName,
+        client
       );
     }
   } catch (error) {
@@ -274,13 +277,13 @@ exports.getOrCreateJoinTable = async (tableA_id, tableB_id, displayColumn) => {
   }
 
   return { status: 'created', joinTable };
-
+  } finally { release(); }
 };
 
-  exports.updateTablePosition = async (table_id, newPosition) => {
-  const result = await pool.query(
-    'SELECT sp_actualizar_posicion_tabla($1, $2)',
-    [table_id, newPosition]
-  );
-  return result;
+exports.updateTablePosition = async (table_id, newPosition, schemaName='public', existingClient=null) => {
+  const { client, release } = await getClient({ schemaName, existingClient });
+  try {
+    const result = await client.query('SELECT sp_actualizar_posicion_tabla($1, $2)', [table_id, newPosition]);
+    return result;
+  } finally { release(); }
 };

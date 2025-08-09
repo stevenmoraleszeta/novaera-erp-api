@@ -8,7 +8,7 @@ exports.createColumnOptions = async (req, res) => {
     const { options } = req.body;
     
     // Validar que la columna exista
-    const columnExists = await columnOptionsService.columnExists(columnId);
+    const columnExists = await columnOptionsService.columnExists(columnId, req.companySchema);
     if (!columnExists) {
       return res.status(404).json({ 
         success: false, 
@@ -34,7 +34,7 @@ exports.createColumnOptions = async (req, res) => {
       }
     }
     
-    await columnOptionsService.createColumnOptions(columnId, options);
+    await columnOptionsService.createColumnOptions(columnId, options, req.companySchema);
     res.json({ success: true, message: 'Opciones creadas exitosamente' });
   } catch (error) {
     console.error('Error creating column options:', error);
@@ -52,7 +52,7 @@ exports.getColumnOptions = async (req, res) => {
     const { columnId } = req.params;
     
     // Validar que la columna exista
-    const columnExists = await columnOptionsService.columnExists(columnId);
+    const columnExists = await columnOptionsService.columnExists(columnId, req.companySchema);
     if (!columnExists) {
       return res.status(404).json({ 
         success: false, 
@@ -60,7 +60,7 @@ exports.getColumnOptions = async (req, res) => {
       });
     }
     
-    const options = await columnOptionsService.getColumnOptions(columnId);
+    const options = await columnOptionsService.getColumnOptions(columnId, req.companySchema);
     res.json({ success: true, options });
   } catch (error) {
     console.error('Error getting column options:', error);
@@ -78,7 +78,7 @@ exports.getAvailableOptions = async (req, res) => {
     const { columnId } = req.params;
     
     // Validar que la columna exista
-    const columnExists = await columnOptionsService.columnExists(columnId);
+    const columnExists = await columnOptionsService.columnExists(columnId, req.companySchema);
     if (!columnExists) {
       return res.status(404).json({ 
         success: false, 
@@ -86,7 +86,7 @@ exports.getAvailableOptions = async (req, res) => {
       });
     }
     
-    const options = await columnOptionsService.getAvailableOptions(columnId);
+    const options = await columnOptionsService.getAvailableOptions(columnId, req.companySchema);
     res.json({ success: true, options });
   } catch (error) {
     console.error('Error getting available options:', error);
@@ -112,7 +112,7 @@ exports.updateColumnOption = async (req, res) => {
       });
     }
     
-    const updatedOption = await columnOptionsService.updateColumnOption(optionId, optionData);
+    const updatedOption = await columnOptionsService.updateColumnOption(optionId, optionData, req.companySchema);
     
     if (!updatedOption) {
       return res.status(404).json({ 
@@ -137,7 +137,7 @@ exports.deleteColumnOption = async (req, res) => {
   try {
     const { optionId } = req.params;
     
-    const deletedOption = await columnOptionsService.deleteColumnOption(optionId);
+    const deletedOption = await columnOptionsService.deleteColumnOption(optionId, req.companySchema);
     
     if (!deletedOption) {
       return res.status(404).json({ 
@@ -163,7 +163,7 @@ exports.deleteColumnOptions = async (req, res) => {
     const { columnId } = req.params;
     
     // Validar que la columna exista
-    const columnExists = await columnOptionsService.columnExists(columnId);
+    const columnExists = await columnOptionsService.columnExists(columnId, req.companySchema);
     if (!columnExists) {
       return res.status(404).json({ 
         success: false, 
@@ -171,7 +171,7 @@ exports.deleteColumnOptions = async (req, res) => {
       });
     }
     
-    await columnOptionsService.deleteColumnOptions(columnId);
+    await columnOptionsService.deleteColumnOptions(columnId, req.companySchema);
     res.json({ success: true, message: 'Opciones eliminadas exitosamente' });
   } catch (error) {
     console.error('Error deleting column options:', error);

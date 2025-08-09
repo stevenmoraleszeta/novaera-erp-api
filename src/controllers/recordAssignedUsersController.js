@@ -4,7 +4,7 @@ const recordAssignedUsersService = require('../services/recordAssignedUsersServi
 exports.getAssignedUsersByRecord = async (req, res) => {
   try {
     const { record_id } = req.params;
-    const users = await recordAssignedUsersService.getAssignedUsersByRecord(record_id);
+    const users = await recordAssignedUsersService.getAssignedUsersByRecord(record_id, req.companySchema);
     res.json(users);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -16,7 +16,7 @@ exports.setAssignedUsersForRecord = async (req, res) => {
   try {
     const { record_id } = req.params;
     const { user_ids } = req.body; // array de IDs
-    await recordAssignedUsersService.setAssignedUsersForRecord(record_id, user_ids);
+    await recordAssignedUsersService.setAssignedUsersForRecord(record_id, user_ids, req.companySchema);
     res.json({ message: 'Usuarios asignados correctamente.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -27,7 +27,7 @@ exports.setAssignedUsersForRecord = async (req, res) => {
 exports.hasAssignedUsersInTable = async (req, res) => {
   try {
     const { table_id } = req.params;
-    const hasUsers = await recordAssignedUsersService.hasAssignedUsersInTable(table_id);
+    const hasUsers = await recordAssignedUsersService.hasAssignedUsersInTable(table_id, req.companySchema);
     res.json({ hasUsers });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -38,7 +38,7 @@ exports.hasAssignedUsersInTable = async (req, res) => {
 exports.getAssignedUsersStatsForTable = async (req, res) => {
   try {
     const { table_id } = req.params;
-    const stats = await recordAssignedUsersService.getAssignedUsersStatsForTable(table_id);
+    const stats = await recordAssignedUsersService.getAssignedUsersStatsForTable(table_id, req.companySchema);
     res.json(stats);
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -1,9 +1,10 @@
 const pool = require('../config/db');
+const { getClient } = require('../utils/dbHelper');
 const crypto = require('crypto');
 
 class FilesService {
   // Subir archivo
-  async uploadFile(fileData) {
+  async uploadFile(fileData, schemaName = 'public', existingClient = null) {
     const { originalName, mimeType, fileDataBase64, userId } = fileData;
     
     try {
@@ -38,10 +39,11 @@ class FilesService {
         RETURNING id, original_name, file_size, mime_type, uploaded_at, file_hash
       `;
       
-      const result = await pool.query(query, [
+  const { client, release } = await getClient({ schemaName, existingClient });
+  const result = await client.query(query, [
         originalName, buffer, fileSize, mimeType, userId, fileHash
       ]);
-      
+  release();
       return result.rows[0];
     } catch (error) {
       throw new Error(`Error al subir archivo: ${error.message}`);
@@ -49,7 +51,7 @@ class FilesService {
   }
 
   // Obtener archivo por ID
-  async getFile(fileId) {
+  async getFile(fileId, schemaName = 'public', existingClient = null) {
     try {
       const query = `
         SELECT id, original_name, file_data, file_size, mime_type, uploaded_at, file_hash
@@ -57,20 +59,22 @@ class FilesService {
         WHERE id = $1 AND is_active = true
       `;
       
-      const result = await pool.query(query, [fileId]);
+  const { client, release } = await getClient({ schemaName, existingClient });
+  const result = await client.query(query, [fileId]);
       
       if (result.rows.length === 0) {
         throw new Error('Archivo no encontrado');
       }
       
-      return result.rows[0];
+  release();
+  return result.rows[0];
     } catch (error) {
       throw new Error(`Error al obtener archivo: ${error.message}`);
     }
   }
 
   // Obtener información del archivo (sin datos binarios)
-  async getFileInfo(fileId) {
+  async getFileInfo(fileId, schemaName = 'public', existingClient = null) {
     try {
       const query = `
         SELECT id, original_name, file_size, mime_type, uploaded_at, file_hash
@@ -78,20 +82,22 @@ class FilesService {
         WHERE id = $1 AND is_active = true
       `;
       
-      const result = await pool.query(query, [fileId]);
+  const { client, release } = await getClient({ schemaName, existingClient });
+  const result = await client.query(query, [fileId]);
       
       if (result.rows.length === 0) {
         return null;
       }
       
-      return result.rows[0];
+  release();
+  return result.rows[0];
     } catch (error) {
       throw new Error(`Error al obtener información del archivo: ${error.message}`);
     }
   }
 
   // Eliminar archivo (soft delete)
-  async deleteFile(fileId, userId) {
+  async deleteFile(fileId, userId, schemaName = 'public', existingClient = null) {
     try {
       const query = `
         UPDATE files 
@@ -100,20 +106,22 @@ class FilesService {
         RETURNING id
       `;
       
-      const result = await pool.query(query, [fileId, userId]);
+  const { client, release } = await getClient({ schemaName, existingClient });
+  const result = await client.query(query, [fileId, userId]);
       
       if (result.rows.length === 0) {
         throw new Error('Archivo no encontrado o no tienes permisos para eliminarlo');
       }
       
-      return { success: true, message: 'Archivo eliminado correctamente' };
+  release();
+  return { success: true, message: 'Archivo eliminado correctamente' };
     } catch (error) {
       throw new Error(`Error al eliminar archivo: ${error.message}`);
     }
   }
 
   // Obtener archivos por usuario
-  async getFilesByUser(userId, page = 1, limit = 10) {
+  async getFilesByUser(userId, page = 1, limit = 10, schemaName = 'public', existingClient = null) {
     try {
       const offset = (page - 1) * limit;
       
@@ -125,7 +133,8 @@ class FilesService {
         LIMIT $2 OFFSET $3
       `;
       
-      const result = await pool.query(query, [userId, limit, offset]);
+  const { client, release } = await getClient({ schemaName, existingClient });
+  const result = await client.query(query, [userId, limit, offset]);
       
       // Contar total de archivos
       const countQuery = `
@@ -134,15 +143,17 @@ class FilesService {
         WHERE uploaded_by = $1 AND is_active = true
       `;
       
-      const countResult = await pool.query(countQuery, [userId]);
+  const countResult = await client.query(countQuery, [userId]);
       
-      return {
+  const data = {
         files: result.rows,
         total: parseInt(countResult.rows[0].total),
         page,
         limit,
         totalPages: Math.ceil(countResult.rows[0].total / limit)
       };
+  release();
+  return data;
     } catch (error) {
       throw new Error(`Error al obtener archivos del usuario: ${error.message}`);
     }
