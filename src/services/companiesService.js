@@ -2,6 +2,20 @@ const pool = require('../config/db');
 const bcrypt = require('bcrypt');
 
 class CompaniesService {
+  // Obtener lista básica de compañías activas (id, code, name, schema)
+  async getAllActiveCompaniesBasic() {
+    try {
+      const result = await pool.query(`
+        SELECT id, company_code, company_name, schema_name
+        FROM public.companies
+        WHERE is_active = true
+      `);
+      return result.rows;
+    } catch (error) {
+      console.error('Error en getAllActiveCompaniesBasic:', error);
+      return [];
+    }
+  }
   
   // Crear nueva empresa con su schema completo
   async createCompany(companyData) {
@@ -38,7 +52,8 @@ class CompaniesService {
       const response = result.rows[0].result;
       
       if (!response.success) {
-        throw new Error(response.message || 'Error al crear la empresa');
+        const detail = response.error ? `: ${response.error}` : '';
+        throw new Error(response.message ? `${response.message}${detail}` : 'Error al crear la empresa');
       }
       
       return {

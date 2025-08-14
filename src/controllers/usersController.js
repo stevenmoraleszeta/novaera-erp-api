@@ -35,8 +35,8 @@ exports.updateUser = async (req, res) => {
 exports.updatePassword = async (req, res) => {
   try {
     const { id } = req.params;
-    const { password_hash } = req.body;
-    const result = await usersService.updatePassword({ id, password_hash }, req.companySchema);
+    const { password_hash, password } = req.body; // soportar password plano
+    const result = await usersService.updatePassword({ id, password_hash, password }, req.companySchema);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -57,7 +57,7 @@ exports.deleteUser = async (req, res) => {
 exports.blockUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await usersService.blockUser(id);
+    const result = await usersService.blockUser(id, req.companySchema);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -67,7 +67,7 @@ exports.blockUser = async (req, res) => {
 exports.unblockUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await usersService.unblockUser(id);
+    const result = await usersService.unblockUser(id, req.companySchema);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -78,7 +78,7 @@ exports.setActiveStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { activo } = req.body;
-    const result = await usersService.setActiveStatus(id, activo);
+    const result = await usersService.setActiveStatus(id, activo, req.companySchema);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -88,8 +88,15 @@ exports.setActiveStatus = async (req, res) => {
 exports.resetPasswordAdmin = async (req, res) => {
   try {
     const { id } = req.params;
-    const { password_hash } = req.body;
-    const result = await usersService.resetPasswordAdmin(id, password_hash);
+    const { password_hash, password } = req.body;
+    let finalHash = password_hash;
+    if (!finalHash && password) {
+      // Hash local para admin reset reutilizando service hashing simplificado (evita doble hash)
+      const bcrypt = require('bcryptjs');
+      finalHash = await bcrypt.hash(password, 10);
+    }
+    if (!finalHash) return res.status(400).json({ error: 'Password requerido' });
+    const result = await usersService.resetPasswordAdmin(id, finalHash, req.companySchema);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
