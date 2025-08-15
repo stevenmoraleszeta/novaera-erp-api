@@ -16,6 +16,123 @@ class CompaniesService {
       return [];
     }
   }
+
+  // Clonar empresa completa copiando TODAS las tablas y TODOS los datos. El usuario solo proporciona un nombre (se usa como company_name y base para schema).
+  async cloneCompany(sourceCompanyCode, copyName) {
+    if (!sourceCompanyCode) throw new Error('Código origen requerido');
+    if (!copyName || !copyName.trim()) throw new Error('Nombre de la copia requerido');
+
+    const rawName = copyName.trim();
+    // Construir nombre de schema seguro
+    const toSchema = (txt) => {
+      let s = txt.toLowerCase().replace(/[^a-z0-9_]+/g, '_');
+      s = s.replace(/_+/g, '_').replace(/^_+|_+$/g, '');
+      if (!/^[a-z]/.test(s)) s = 'c_' + s; // asegurar que inicia con letra
+      if (s.length === 0) s = 'c_schema';
+      if (s.length > 50) s = s.slice(0, 50); // reservar espacio para sufijos
+      return s;
+    };
+    const baseSchema = toSchema(rawName);
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Obtener empresa origen
+      const srcRes = await client.query('SELECT * FROM public.companies WHERE company_code = $1 AND is_active = true FOR UPDATE', [sourceCompanyCode]);
+      if (srcRes.rows.length === 0) throw new Error('Empresa origen no encontrada');
+      const src = srcRes.rows[0];
+
+      // Resolver nombre de schema único agregando sufijos si es necesario
+      let schemaName = baseSchema;
+      let idx = 2;
+      while (true) {
+        const exists = await client.query('SELECT 1 FROM information_schema.schemata WHERE schema_name = $1', [schemaName]);
+        if (exists.rows.length === 0) break;
+        schemaName = `${baseSchema}_${idx}`;
+        if (schemaName.length > 63) schemaName = schemaName.slice(0, 63); // límite Postgres
+        idx++;
+        if (idx > 200) throw new Error('No se pudo generar un nombre de schema único');
+      }
+
+      // Generar nuevo company_code
+      const codeRes = await client.query('SELECT generate_company_code() as code');
+      const newCode = codeRes.rows[0].code;
+
+      // Crear schema destino
+      await client.query(`CREATE SCHEMA "${schemaName}"`);
+
+      // Copiar TODAS las tablas (estructura + datos)
+      const tablesRes = await client.query(`
+        SELECT table_name FROM information_schema.tables 
+        WHERE table_schema = $1 AND table_type='BASE TABLE'
+        ORDER BY table_name
+      `, [src.schema_name]);
+
+      for (const { table_name: tbl } of tablesRes.rows) {
+        await client.query(`CREATE TABLE "${schemaName}"."${tbl}" (LIKE "${src.schema_name}"."${tbl}" INCLUDING ALL)`);
+        await client.query(`INSERT INTO "${schemaName}"."${tbl}" SELECT * FROM "${src.schema_name}"."${tbl}"`);
+      }
+
+      // Ajustar secuencias/identidades: establecer al MAX(col) para columnas identity
+      const identities = await client.query(`
+        SELECT table_name, column_name
+        FROM information_schema.columns
+        WHERE table_schema = $1 AND is_identity = 'YES'
+      `, [schemaName]);
+      for (const r of identities.rows) {
+        // setval(pg_get_serial_sequence('schema.table','col'), max(col))
+        await client.query(`SELECT setval(pg_get_serial_sequence($1,$2), (SELECT COALESCE(MAX("${r.column_name}"),0) FROM "${schemaName}"."${r.table_name}" ) , true)`, [`${schemaName}.${r.table_name}`, r.column_name]);
+      }
+
+      // Insertar registro en public.companies
+      // Asegurar email único (companies.email es único). Si el original ya existe, generar variantes.
+      const deriveUniqueEmail = async () => {
+        let baseEmail = (src.email || '').toLowerCase();
+        if (!baseEmail || !baseEmail.includes('@')) {
+          baseEmail = `${schemaName}@example.local`; // fallback
+        }
+        const [local, domain] = baseEmail.split('@');
+        const cleanLocal = local.replace(/[^a-z0-9._-]+/g,'').slice(0,40) || 'company';
+        // Primera prueba: usar mismo email si no existe
+        let candidate = `${cleanLocal}@${domain}`;
+        let attempt = 0;
+        while (true) {
+          const exists = await client.query('SELECT 1 FROM public.companies WHERE lower(email)=lower($1)', [candidate]);
+            if (exists.rows.length === 0) return candidate;
+          attempt++;
+          if (attempt > 100) throw new Error('No se pudo generar email único para la copia');
+          candidate = `${cleanLocal}_copy${attempt}@${domain}`;
+        }
+      };
+      const newEmail = await deriveUniqueEmail();
+
+      const newCompanyRes = await client.query(`
+        INSERT INTO public.companies (company_code, company_name, schema_name, email, phone, address, is_active, subscription_plan, subscription_expires_at, max_users, storage_limit_mb, created_at, updated_at)
+        VALUES ($1,$2,$3,$4,$5,$6,true,$7,$8,$9,$10,NOW(),NOW())
+        RETURNING id, company_code, schema_name, company_name, email
+      `, [
+        newCode,
+        rawName,
+        schemaName,
+        newEmail,
+        src.phone,
+        src.address,
+        src.subscription_plan,
+        src.subscription_expires_at,
+        src.max_users,
+        src.storage_limit_mb
+      ]);
+
+      await client.query('COMMIT');
+      return { success: true, data: newCompanyRes.rows[0], message: 'Empresa clonada' };
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
   
   // Crear nueva empresa con su schema completo
   async createCompany(companyData) {

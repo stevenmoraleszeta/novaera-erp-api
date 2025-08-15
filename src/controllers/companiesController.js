@@ -50,6 +50,21 @@ class CompaniesController {
       });
     }
   }
+
+  // Clonar empresa
+  async cloneCompany(req, res) {
+    try {
+      const { source_code, copy_name } = req.body;
+      if (!source_code || !copy_name) {
+        return res.status(400).json({ success: false, error: 'source_code y copy_name requeridos' });
+      }
+      const result = await companiesService.cloneCompany(source_code, copy_name);
+      res.json(result);
+    } catch (error) {
+      console.error('Error en cloneCompany controller:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
   
   // Obtener empresa por código
   async getCompanyByCode(req, res) {

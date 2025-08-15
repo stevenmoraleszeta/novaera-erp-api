@@ -30,6 +30,9 @@ router.get('/all', authMiddleware, companiesController.getAllCompanies);
 // Actualizar empresa
 router.put('/:id', authMiddleware, companiesController.updateCompany);
 
+// Clonar empresa
+router.post('/clone', authMiddleware, companiesController.cloneCompany);
+
 // Eliminar empresa (soft delete)
 router.delete('/:id', authMiddleware, companiesController.deleteCompany);
 
