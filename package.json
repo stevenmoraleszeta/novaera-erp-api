@@ -1,7 +1,7 @@
 {
-  "name": "erp-api",
+  "name": "novaera-erp-api",
   "version": "1.0.0",
-  "description": "API RESTful para ERP usando Express y PostgreSQL",
+  "description": "A comprehensive RESTful API for Enterprise Resource Planning (ERP) system built with Node.js, Express, and PostgreSQL",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
@@ -11,10 +11,16 @@
     "express",
     "postgresql",
     "erp",
-    "api"
+    "api",
+    "restful",
+    "nodejs",
+    "backend",
+    "enterprise",
+    "rbac",
+    "jwt"
   ],
-  "author": "",
-  "license": "MIT",
+  "author": "Steven Morales Fallas",
+  "license": "PROPRIETARY",
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.7",
