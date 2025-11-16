@@ -149,13 +149,79 @@ exports.getUserRoles = async (userId) => {
   return result.rows.map(row => row.name);
 };
 
+exports.getUserRolesWithDetails = async (userId) => {
+  const result = await pool.query(`
+    SELECT r.id, r.name, r.is_admin, r.active
+    FROM roles r 
+    JOIN user_roles ur ON r.id = ur.role_id 
+    WHERE ur.user_id = $1 AND r.active = true
+  `, [userId]);
+  return result.rows;
+};
+
+exports.getUserById = async (id) => {
+  // Query that joins user with their roles
+  const result = await pool.query(`
+    SELECT 
+      u.id,
+      u.name,
+      u.email,
+      u.is_active,
+      u.is_blocked,
+      u.last_login,
+      u.avatar_url,
+      r.name as role_name,
+      r.id as role_id
+    FROM users u
+    LEFT JOIN user_roles ur ON u.id = ur.user_id
+    LEFT JOIN roles r ON ur.role_id = r.id
+    WHERE u.id = $1
+  `, [id]);
+  
+  if (result.rows.length === 0) {
+    return null;
+  }
+  
+  // Group roles
+  const user = {
+    id: result.rows[0].id,
+    name: result.rows[0].name,
+    email: result.rows[0].email,
+    is_active: result.rows[0].is_active,
+    is_blocked: result.rows[0].is_blocked,
+    last_login: result.rows[0].last_login,
+    avatar_url: result.rows[0].avatar_url,
+    roles: []
+  };
+  
+  // Add roles if they exist
+  result.rows.forEach(row => {
+    if (row.role_name && row.role_id) {
+      user.roles.push({
+        id: row.role_id,
+        name: row.role_name
+      });
+    }
+  });
+  
+  // Add primary role
+  user.role = user.roles.length > 0 ? user.roles[0].name : 'Sin rol';
+  
+  return user;
+};
+
 exports.getUserWithRoles = async (email) => {
   const user = await exports.getUserByEmail(email);
   if (!user) return null;
   
-  const roles = await exports.getUserRoles(user.id);
+  // Obtener roles con detalles completos (incluyendo is_admin)
+  const rolesWithDetails = await exports.getUserRolesWithDetails(user.id);
+  // Mantener compatibilidad: roles como array de nombres
+  const roleNames = rolesWithDetails.map(r => r.name);
+  
   return {
     ...user,
-    roles
+    roles: roleNames, // Para compatibilidad con código existente
+    rolesWithDetails: rolesWithDetails // Roles completos con is_admin
   };
 };
