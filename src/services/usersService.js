@@ -149,6 +149,16 @@ exports.getUserRoles = async (userId) => {
   return result.rows.map(row => row.name);
 };
 
+exports.getUserRolesWithDetails = async (userId) => {
+  const result = await pool.query(`
+    SELECT r.id, r.name, r.is_admin, r.active
+    FROM roles r 
+    JOIN user_roles ur ON r.id = ur.role_id 
+    WHERE ur.user_id = $1 AND r.active = true
+  `, [userId]);
+  return result.rows;
+};
+
 exports.getUserById = async (id) => {
   // Query that joins user with their roles
   const result = await pool.query(`
@@ -204,9 +214,14 @@ exports.getUserWithRoles = async (email) => {
   const user = await exports.getUserByEmail(email);
   if (!user) return null;
   
-  const roles = await exports.getUserRoles(user.id);
+  // Obtener roles con detalles completos (incluyendo is_admin)
+  const rolesWithDetails = await exports.getUserRolesWithDetails(user.id);
+  // Mantener compatibilidad: roles como array de nombres
+  const roleNames = rolesWithDetails.map(r => r.name);
+  
   return {
     ...user,
-    roles
+    roles: roleNames, // Para compatibilidad con código existente
+    rolesWithDetails: rolesWithDetails // Roles completos con is_admin
   };
 };
