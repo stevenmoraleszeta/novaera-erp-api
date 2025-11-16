@@ -25,18 +25,52 @@ if (process.env.DB_SSL === 'disable') {
   };
 }
 
-const pool = new Pool({
-  host: process.env.DB_HOST,
-  port: Number(process.env.DB_PORT),
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  ssl: sslConfig,
-  // Additional connection options to handle SSL issues
-  connectionTimeoutMillis: 10000,
-  idleTimeoutMillis: 30000,
-  max: 20
-});
+// Support DATABASE_URL (provided by Render) or individual connection parameters
+let poolConfig;
+
+// Debug: Log which connection method is being used
+console.log('🔍 Database Configuration Debug:');
+console.log('  DATABASE_URL exists:', !!process.env.DATABASE_URL);
+console.log('  NODE_ENV:', process.env.NODE_ENV);
+console.log('  DB_HOST:', process.env.DB_HOST);
+console.log('  DB_SSL:', process.env.DB_SSL);
+
+if (process.env.DATABASE_URL) {
+  // Use DATABASE_URL if provided (Render, Railway, Heroku, etc.)
+  console.log('✅ Using DATABASE_URL for connection');
+  // For Render, always use SSL when DATABASE_URL is provided
+  const renderSslConfig = process.env.DB_SSL === 'disable' 
+    ? false 
+    : { rejectUnauthorized: false };
+  
+  poolConfig = {
+    connectionString: process.env.DATABASE_URL,
+    ssl: renderSslConfig,
+    connectionTimeoutMillis: 10000,
+    idleTimeoutMillis: 30000,
+    max: 20
+  };
+} else {
+  // Use individual connection parameters
+  console.log('⚠️  Using individual DB parameters (DATABASE_URL not found)');
+  console.log('  Host:', process.env.DB_HOST || 'localhost');
+  console.log('  Port:', process.env.DB_PORT || 5432);
+  console.log('  Database:', process.env.DB_NAME);
+  
+  poolConfig = {
+    host: process.env.DB_HOST || 'localhost',
+    port: Number(process.env.DB_PORT) || 5432,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    ssl: sslConfig,
+    connectionTimeoutMillis: 10000,
+    idleTimeoutMillis: 30000,
+    max: 20
+  };
+}
+
+const pool = new Pool(poolConfig);
 
 // Handle connection errors
 pool.on('error', (err) => {

@@ -31,7 +31,11 @@ const app = express();
 
 app.set('trust proxy', 1);
 
-const allowedOrigins = ['http://localhost:3000', 'https://erp-system-17kb.vercel.app'];
+// CORS configuration - supports environment variable or default origins
+const allowedOrigins = process.env.CORS_ORIGIN 
+  ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
+  : ['http://localhost:3000', 'https://novaera-saas-erp.vercel.app'];
+
 app.use(cors({
   origin: function(origin, callback) {
     // Permitir solicitudes sin origen (como Postman) o si el origen está en la lista
