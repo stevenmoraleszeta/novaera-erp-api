@@ -105,40 +105,13 @@ exports.bulkUpdateRolePermissions = async (role_id, permissionsMap) => {
 
 exports.getUserPermissions = async (userId, tableId) => {
   try {
-    const result = await pool.query(`
-      SELECT 
-        p.can_create,
-        p.can_read,
-        p.can_update,
-        p.can_delete
-      FROM permissions p
-      JOIN user_roles ur ON p.role_id = ur.role_id
-      WHERE ur.user_id = $1 AND p.table_id = $2
-    `, [userId, tableId]);
-    
-    if (result.rows.length === 0) {
-      return {
-        can_create: false,
-        can_read: false,
-        can_update: false,
-        can_delete: false
-      };
-    }
-    
-    // Si el usuario tiene múltiples roles, combinar permisos (OR lógico)
-    const combinedPermissions = result.rows.reduce((acc, row) => ({
-      can_create: acc.can_create || row.can_create,
-      can_read: acc.can_read || row.can_read,
-      can_update: acc.can_update || row.can_update,
-      can_delete: acc.can_delete || row.can_delete
-    }), {
-      can_create: false,
-      can_read: false,
-      can_update: false,
-      can_delete: false
-    });
-    
-    return combinedPermissions;
+    // Todos los usuarios tienen todos los permisos de administrador
+    return {
+      can_create: true,
+      can_read: true,
+      can_update: true,
+      can_delete: true
+    };
   } catch (error) {
     console.error('Error getting user permissions:', error);
     throw error;
@@ -147,40 +120,18 @@ exports.getUserPermissions = async (userId, tableId) => {
 
 exports.getUserPermissionsForAllTables = async (userId) => {
   try {
-    const result = await pool.query(`
-      SELECT 
-        p.table_id,
-        p.can_create,
-        p.can_read,
-        p.can_update,
-        p.can_delete
-      FROM permissions p
-      JOIN user_roles ur ON p.role_id = ur.role_id
-      WHERE ur.user_id = $1
-    `, [userId]);
+    // Obtener todas las tablas para asignar permisos completos
+    const tablesResult = await pool.query('SELECT id FROM tables');
     
-    // Agrupar por table_id y combinar permisos
+    // Todos los usuarios tienen todos los permisos en todas las tablas
     const permissionsByTable = {};
-    
-    result.rows.forEach(row => {
-      if (!permissionsByTable[row.table_id]) {
-        permissionsByTable[row.table_id] = {
-          can_create: false,
-          can_read: false,
-          can_update: false,
-          can_delete: false
-        };
-      }
-      
-      // Combinar permisos (OR lógico)
-      permissionsByTable[row.table_id].can_create = 
-        permissionsByTable[row.table_id].can_create || row.can_create;
-      permissionsByTable[row.table_id].can_read = 
-        permissionsByTable[row.table_id].can_read || row.can_read;
-      permissionsByTable[row.table_id].can_update = 
-        permissionsByTable[row.table_id].can_update || row.can_update;
-      permissionsByTable[row.table_id].can_delete = 
-        permissionsByTable[row.table_id].can_delete || row.can_delete;
+    tablesResult.rows.forEach(row => {
+      permissionsByTable[row.id] = {
+        can_create: true,
+        can_read: true,
+        can_update: true,
+        can_delete: true
+      };
     });
     
     return permissionsByTable;

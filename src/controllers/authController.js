@@ -47,8 +47,8 @@ exports.login = async (req, res) => {
       maxAge: 8 * 60 * 60 * 1000 // 8 horas
     });
     
-    // Verificar si el usuario es administrador basándose en sus roles
-    const isAdmin = user.rolesWithDetails?.some(role => role.is_admin === true) || false;
+    // Todos los usuarios tienen permisos de administrador
+    const isAdmin = true;
     
     res.json({ 
       user: { 
@@ -91,9 +91,9 @@ exports.me = async (req, res) => {
       return res.status(403).json({ error: 'Tu cuenta está bloqueada. Contacta al administrador.' });
     }
     
-    // Obtener roles completos del usuario para verificar is_admin
+    // Todos los usuarios tienen permisos de administrador
     const rolesWithDetails = await usersService.getUserRolesWithDetails(user.id);
-    const isAdmin = rolesWithDetails?.some(role => role.is_admin === true) || false;
+    const isAdmin = true;
     
     res.json({ 
       id: decoded.id, 
